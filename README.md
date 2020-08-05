@@ -7,8 +7,9 @@ Cache Management Operations (CMOs) for RISC-V
 
 TBD: working group
 
-* [repo](../../riscv-CMOs)
-* [wiki](../../riscv-CMOs/wiki)
+* https://github.com/riscv/riscv-CMOs
+* https://github.com/riscv/riscv-CMOs/wiki
+* TBD: links that work when checked out locally as well as on GitHub
 
 Note:
 * wiki more than repo: 
