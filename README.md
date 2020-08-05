@@ -12,9 +12,10 @@ TBD: working group
 * TBD: links that work when checked out locally as well as on GitHub
 
 Key wiki pages
-* [[RISC-V needs CMOs, and hence a CMO Working Group]]
-* [[CMOs WG Draft Proposed Charter]]
-* [[Draft CMO proposals]]
+* [RISC-V needs CMOs, and hence a CMO Working Group](https://github.com/riscv/riscv-CMOs/wiki/RISC-V-needs-CMOs%2C-and-hence-a-CMO-Working-Group)
+  * email seeking WG approval and call for participation
+* [CMOs WG Draft Proposed Charter](https://github.com/riscv/riscv-CMOs/wiki/CMOs-WG-Draft-Proposed-Charter)
+* [Draft CMO proposals](https://github.com/riscv/riscv-CMOs/wiki/Draft-CMO-proposals)
 
 
 Note:
