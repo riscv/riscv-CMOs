@@ -1,0 +1,3 @@
+[submodule "riscv-CMOs.wiki"]
+	path = riscv-CMOs.wiki
+	url = ./riscv-CMOs.wiki
