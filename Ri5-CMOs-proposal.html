@@ -572,10 +572,10 @@ body.manpage div.sectionbody {
 <div id="preamble">
 <div class="sectionbody">
 <div class="paragraph">
-<p>2020-08-12 20:59:27 -0700 - When this draft was generated. Not necessarily modified.</p>
+<p>2020-08-12 22:03:37 -0700 - When this draft was generated. Not necessarily modified.</p>
 </div>
 <div class="paragraph">
-<p>See <a href="https://github.com/AndyGlew/Ri5-stuff/wiki/generated-HTML-and-PDF-for-CMOs-proposal" class="bare">https://github.com/AndyGlew/Ri5-stuff/wiki/generated-HTML-and-PDF-for-CMOs-proposal</a>
+<p>See <a href="https://github.com/riscv/riscv-CMOs/wiki/generated-HTML-and-PDF-for-CMOs-proposal" class="bare">https://github.com/riscv/riscv-CMOs/wiki/generated-HTML-and-PDF-for-CMOs-proposal</a>
 for pointers to  AsciiDoc source, and  generated HTML and PDF, for a version of document.</p>
 </div>
 <div class="paragraph">
@@ -629,6 +629,9 @@ See <a href="#_rationale_using_asciidoctor_note_admonition">Rationale using Asci
 </li>
 </ul>
 </div>
+</li>
+<li>
+<p>Spreadsheet of actual operations is at <a href="https://github.com/riscv/riscv-CMOs/blob/master/CMOs-proposal-spreadsheet.xlsx" class="bare">https://github.com/riscv/riscv-CMOs/blob/master/CMOs-proposal-spreadsheet.xlsx</a></p>
 </li>
 </ul>
 </div>
@@ -877,15 +880,32 @@ See <a href="#_rationale_using_asciidoctor_note_admonition">Rationale using Asci
 <li><a href="#_7">.</a></li>
 <li><a href="#_other_issues_for_this_cmo_proposal">8. Other issues for this CMO Proposal</a></li>
 <li><a href="#_8">.</a></li>
-<li><a href="#_techpubs_information">Appendix A: Techpubs Information</a>
+<li><a href="#_terminology">Appendix A: Terminology</a></li>
+<li><a href="#_notation">Appendix B: Notation</a>
 <ul class="sectlevel2">
-<li><a href="#_conventions_specific_to_this_document">A.1. Conventions specific to this document.</a>
-<ul class="sectlevel3">
-<li><a href="#_github_wiki_markdown_links_are_broken">A.1.1. GitHub wiki markdown [[links]]` are broken</a></li>
-<li><a href="#_rationale_using_asciidoctor_note_admonition">A.1.2. Rationale using AsciiDoctor NOTE admonition</a></li>
+<li><a href="#_encoding_bitstring_notation">B.1. Encoding Bitstring Notation</a></li>
 </ul>
 </li>
-<li><a href="#_techpubs_information_2">A.2. Techpubs Information</a></li>
+<li><a href="#_9">.</a></li>
+<li><a href="#_techpubs_information">Appendix C: Techpubs Information</a>
+<ul class="sectlevel2">
+<li><a href="#_conventions_specific_to_this_document">C.1. Conventions specific to this document.</a>
+<ul class="sectlevel3">
+<li><a href="#_github_wiki_markdown_links_are_broken">C.1.1. GitHub wiki markdown [[links]]` are broken</a></li>
+<li><a href="#_rationale_using_asciidoctor_note_admonition">C.1.2. Rationale using AsciiDoctor NOTE admonition</a></li>
+</ul>
+</li>
+<li><a href="#_techpubs_information_2">C.2. Techpubs Information</a>
+<ul class="sectlevel3">
+<li><a href="#_locations">C.2.1. Locations</a>
+<ul class="sectlevel4">
+<li><a href="#_on_github_official">C.2.1.1. On GitHub - Official</a></li>
+<li><a href="#_on_github_original">C.2.1.2. On GitHub - Original</a></li>
+<li><a href="#_local_workspaceclone">C.2.1.3. Local Workspace/clone</a></li>
+</ul>
+</li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
@@ -943,10 +963,10 @@ They are encoded in the instruction encoding as described below.</p>
 <p>Briefly:</p>
 </div>
 <div class="paragraph">
-<p>PREFETCH.64B.R: imm12.rs1:5.110.rd=00000.0010011, e.g. ORI with RD=x0</p>
+<p><code>PREFETCH.64B.R: imm12.rs1:5.110.rd=00000.0010011</code>, e.g. ORI with RD=x0</p>
 </div>
 <div class="paragraph">
-<p>PREFETCH.64B.WL imm12.rs1:5.110.rd=00000.0110011, i.e. ANDI with RD=x0</p>
+<p><code>PREFETCH.64B.WL imm12.rs1:5.110.rd=00000.0110011</code>, i.e. ANDI with RD=x0</p>
 </div>
 <div class="paragraph">
 <p>See section
@@ -1323,7 +1343,7 @@ for purposes of allocating corresponding fields in the CMO delegation CSRs.</p>
 <div class="ulist">
 <ul>
 <li>
-<p>imm12.rs1:5.110.rd=00000.0010011</p>
+<p><code>imm12.rs1:5.110.rd=00000.0010011</code></p>
 </li>
 </ul>
 </div>
@@ -1346,7 +1366,7 @@ for purposes of allocating corresponding fields in the CMO delegation CSRs.</p>
 <div class="ulist">
 <ul>
 <li>
-<p>imm12.rs1:5.110.rd=00000.0110011</p>
+<p><code>imm12.rs1:5.110.rd=00000.0110011</code></p>
 </li>
 </ul>
 </div>
@@ -3520,7 +3540,7 @@ Sometimes by traversing multiple levels.</p>
 more convenient than this asciidoc text.</p>
 </div>
 <div class="paragraph">
-<p>This spreadsheet is available on GitHub at <a href="https://github.com/AndyGlew/Ri5-stuff/blob/master/CMOs.xlsx" class="bare">https://github.com/AndyGlew/Ri5-stuff/blob/master/CMOs.xlsx</a></p>
+<p>This spreadsheet is available on GitHub at <a href="https://github.com/riscv/riscv-CMOs/blob/master/CMOs.xlsx" class="bare">https://github.com/riscv/riscv-CMOs/blob/master/CMOs.xlsx</a></p>
 </div>
 <div class="paragraph">
 <p>TBD: ensure that the latest version of the spreadsheet has been uploaded.  As of &lt;2020-06-11 Thursday, June 11, WW24&gt; the version online is dated April 30th.</p>
@@ -4171,12 +4191,105 @@ This is no better than the current state of the art.</p>
 </div>
 </div>
 <div class="sect1">
-<h2 id="_techpubs_information">Appendix A: Techpubs Information</h2>
+<h2 id="_terminology">Appendix A: Terminology</h2>
+<div class="sectionbody">
+<div class="paragraph">
+<p>TBD:  automatically generate from  marks in line as in LaTeX (AsciiDoc is probably incapable).</p>
+</div>
+<div class="dlist">
+<dl>
+<dt class="hdlist1">CMO</dt>
+<dd>
+<p>Cache Management Operation.  A superset of prefetches, post-stores,  and other operations.</p>
+</dd>
+<dt class="hdlist1">Post-Store</dt>
+<dd>
+<p>A cute Berkeleyism for CMOs that push data from a near cache to a further cache,
+contrasting with Pre-Fetch.</p>
+</dd>
+<dt class="hdlist1">Pre-Fetch, PREFETCH</dt>
+<dd>
+<p>Move data  within cache hierarchy,  typically from  further out (e.g. memory) to  closer in. (Possibly from one processor&#8217;s cache to another.)</p>
+</dd>
+<dt class="hdlist1">Ri5</dt>
+<dd>
+<p>shorthand for RISC-V. TBD change from Golew specific Ri5 to more standard RV</p>
+</dd>
+</dl>
+</div>
+<div class="paragraph">
+<p>RV::standard  shorthand for RISC-V (?).</p>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_notation">Appendix B: Notation</h2>
 <div class="sectionbody">
 <div class="sect2">
-<h3 id="_conventions_specific_to_this_document">A.1. Conventions specific to this document.</h3>
+<h3 id="_encoding_bitstring_notation">B.1. Encoding Bitstring Notation</h3>
+<div class="paragraph">
+<p>This document uses notation such as this below for  instruction encoding bit strings:</p>
+</div>
+<div class="paragraph">
+<p>PREFETCH.64B.R: <code>imm12.rs1:5.110.rd=00000.0010011</code>, e.g. ORI with RD=x0</p>
+</div>
+<div class="paragraph">
+<p>In these bitstrings</p>
+</div>
+<div class="ulist">
+<ul>
+<li>
+<p>0 and 1  respond to bit values</p>
+</li>
+<li>
+<p>fields are specified by rs2:5, rd=00000, etc</p>
+</li>
+<li>
+<p>i.e. fieldname:width</p>
+</li>
+<li>
+<p>e.g. fieldname=value (width implied)</p>
+</li>
+<li>
+<p>punctuation  is used to improve readability, such as period ".", underscore "_", and comma ","</p>
+</li>
+</ul>
+</div>
+<div class="paragraph">
+<p>Bit positions are numbered with bit 0 on the right, in the usual  RISC-V manner.</p>
+</div>
+<div class="paragraph">
+<p>Elsewhere in the RISC-V toolchain a similar notation is used,
+with additions such as allowing blanks to separate fields,
+and allowing fields to be specified out of order  by specifying bit positions such as
+<code>rd=5..9</code></p>
+</div>
+<div class="paragraph">
+<p>TBD: unify these notations.</p>
+</div>
+<div class="paragraph">
+<p>TBD: generate pretty human readable tables ("opcode maps") from these notations.</p>
+</div>
+<div class="paragraph">
+<p>(The RISC-V toolchain already generates ugly human readable tables.)
+y</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect1">
+<h2 id="_9">.</h2>
+<div class="sectionbody">
+
+</div>
+</div>
+<div class="sect1">
+<h2 id="_techpubs_information">Appendix C: Techpubs Information</h2>
+<div class="sectionbody">
+<div class="sect2">
+<h3 id="_conventions_specific_to_this_document">C.1. Conventions specific to this document.</h3>
 <div class="sect3">
-<h4 id="_github_wiki_markdown_links_are_broken">A.1.1. GitHub wiki markdown [[links]]` are broken</h4>
+<h4 id="_github_wiki_markdown_links_are_broken">C.1.1. GitHub wiki markdown [[links]]` are broken</h4>
 <div class="paragraph">
 <p>Bold italic <strong><em>links</em></strong> indicate text that should be links to pages in the original wiki.
 The tools used to generate this document HTML and PDF from asciidoc and markdown
@@ -4184,7 +4297,7 @@ do not handle these links (yet).</p>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_rationale_using_asciidoctor_note_admonition">A.1.2. Rationale using AsciiDoctor NOTE admonition</h4>
+<h4 id="_rationale_using_asciidoctor_note_admonition">C.1.2. Rationale using AsciiDoctor NOTE admonition</h4>
 <div class="admonitionblock note">
 <table>
 <tr>
@@ -4209,14 +4322,14 @@ Therefore, section headers do not appear as these rationale/notes, even if the e
 </div>
 </div>
 <div class="sect2">
-<h3 id="_techpubs_information_2">A.2. Techpubs Information</h3>
+<h3 id="_techpubs_information_2">C.2. Techpubs Information</h3>
 <div class="paragraph">
 <p>This source document: Ri5-CMOs-proposal.asciidoc</p>
 </div>
 <div class="ulist">
 <ul>
 <li>
-<p>docdatetime:  2020-08-12 20:59:25 -0700 - last modified date and time</p>
+<p>docdatetime:  2020-08-12 21:51:44 -0700 - last modified date and time</p>
 <div class="ulist">
 <ul>
 <li>
@@ -4226,7 +4339,7 @@ Therefore, section headers do not appear as these rationale/notes, even if the e
 </div>
 </li>
 <li>
-<p>localdatetime:  2020-08-12 20:59:27 -0700 - when generated</p>
+<p>localdatetime:  2020-08-12 22:03:37 -0700 - when generated</p>
 </li>
 </ul>
 </div>
@@ -4251,13 +4364,113 @@ Therefore, section headers do not appear as these rationale/notes, even if the e
 <a href="techpub" class="bare">techpub</a> / <a href="file:techpubs.asciidoc" class="bare">file:techpubs.asciidoc</a>
 (TBD: fix so that works both checked out as file: links and on GitHub wiki).</p>
 </div>
+<div class="sect3">
+<h4 id="_locations">C.2.1. Locations</h4>
 <div class="paragraph">
 <p>You may be reading this in any of several different places:</p>
 </div>
+<div class="sect4">
+<h5 id="_on_github_official">C.2.1.1. On GitHub - Official</h5>
 <div class="ulist">
 <ul>
 <li>
-<p>On GitHub</p>
+<p>This document&#8217;s source files (mostly asciidoc) on its Github repository wiki:</p>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="https://github.com/riscv/riscv-CMOs/wiki" class="bare">https://github.com/riscv/riscv-CMOs/wiki</a></p>
+</li>
+<li>
+<p>top of document: <a href="https://github.com/riscv/riscv-CMOs/wiki/Ri5-CMOs-proposal" class="bare">https://github.com/riscv/riscv-CMOs/wiki/Ri5-CMOs-proposal</a></p>
+<div class="ulist">
+<ul>
+<li>
+<p>this is a .asciidoc file, rendered by GitHub&#8217;s wiki</p>
+</li>
+<li>
+<p>asciidoc includes link to other parts of the document</p>
+</li>
+<li>
+<p>the wiki contains other pages, not part of the document, some of which provide more background</p>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>Generated HTML and PDF files on GitHub:</p>
+<div class="ulist">
+<ul>
+<li>
+<p><a href="https://github.com/riscv/riscv-CMOs/" class="bare">https://github.com/riscv/riscv-CMOs/</a></p>
+<div class="ulist">
+<ul>
+<li>
+<p>HTML: <a href="https://github.com/riscv/riscv-CMOs/blob/master/Ri5-CMOs-proposal.html" class="bare">https://github.com/riscv/riscv-CMOs/blob/master/Ri5-CMOs-proposal.html</a></p>
+<div class="ulist">
+<ul>
+<li>
+<p>displays raw, does not render</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>PDF: <a href="https://github.com/riscv/riscv-CMOs/blob/master/Ri5-CMOs-proposal.pdf" class="bare">https://github.com/riscv/riscv-CMOs/blob/master/Ri5-CMOs-proposal.pdf</a></p>
+<div class="ulist">
+<ul>
+<li>
+<p>displays - in GitHub&#8217;s ugly way</p>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p><a href="https://github.com/riscv/riscv-CMOs/wiki" class="bare">https://github.com/riscv/riscv-CMOs/wiki</a></p>
+<div class="ulist">
+<ul>
+<li>
+<p>PDF: <a href="https://github.com/riscv/riscv-CMOs/wiki/Ri5-CMOs-proposal.pdf" class="bare">https://github.com/riscv/riscv-CMOs/wiki/Ri5-CMOs-proposal.pdf</a></p>
+<div class="ulist">
+<ul>
+<li>
+<p>downloads, does not display</p>
+</li>
+</ul>
+</div>
+</li>
+<li>
+<p>HTML: <a href="https://github.com/riscv/riscv-CMOs/wiki/Ri5-CMOs-proposal.html" class="bare">https://github.com/riscv/riscv-CMOs/wiki/Ri5-CMOs-proposal.html</a></p>
+<div class="ulist">
+<ul>
+<li>
+<p>displays raw, does not render</p>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect4">
+<h5 id="_on_github_original">C.2.1.2. On GitHub - Original</h5>
+<div class="paragraph">
+<p>TBD: remove these references when official locations fully verified</p>
+</div>
+<div class="paragraph">
+<p>Originally written in author&#8217;s personal GitHub repo+wiki:</p>
+</div>
 <div class="ulist">
 <ul>
 <li>
@@ -4349,7 +4562,11 @@ Therefore, section headers do not appear as these rationale/notes, even if the e
 </li>
 </ul>
 </div>
-</li>
+</div>
+<div class="sect4">
+<h5 id="_local_workspaceclone">C.2.1.3. Local Workspace/clone</h5>
+<div class="ulist">
+<ul>
 <li>
 <p>On your local system, where you may have cloned the GitHub parent and wiki repositories, and where you may have built the document:</p>
 <div class="ulist">
@@ -4387,7 +4604,7 @@ Therefore, section headers do not appear as these rationale/notes, even if the e
 <p>docfile:  /cygdrive/c/Users/glew/Documents/GitHub/riscv-CMOs/riscv-CMOs.wiki/Ri5-CMOs-proposal.asciidoc - full path</p>
 </li>
 <li>
-<p>localdatetime:  2020-08-12 20:59:27 -0700 - when generated</p>
+<p>localdatetime:  2020-08-12 22:03:37 -0700 - when generated</p>
 </li>
 <li>
 <p>outfile:  /cygdrive/c/Users/glew/Documents/GitHub/riscv-CMOs/riscv-CMOs.wiki/Ri5-CMOs-proposal.html - full path of the output file</p>
@@ -4405,10 +4622,12 @@ but have already been helpful finding source for orphaned drafts generated as PD
 </div>
 </div>
 </div>
+</div>
+</div>
 <div id="footer">
 <div id="footer-text">
 Version 0.6<br>
-Last updated 2020-08-12 20:59:25 -0700
+Last updated 2020-08-12 21:51:44 -0700
 </div>
 </div>
 </body>
