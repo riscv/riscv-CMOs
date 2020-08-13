@@ -29,6 +29,10 @@ Q: is there a way to treat this project on github, both "main git repo" and "wik
 * [CMOs WG Draft Proposed Charter](https://github.com/riscv/riscv-CMOs/wiki/CMOs-WG-Draft-Proposed-Charter)
 * [Draft CMO proposals](https://github.com/riscv/riscv-CMOs/wiki/Draft-CMO-proposals)
 (for that matter, also the other parts of the project, like issues)
+   * [[generated-HTML-and-PDF-for-CMOs-proposal]] (local)
+   * on web: https://github.com/riscv/riscv-CMOs/wiki/generated-HTML-and-PDF-for-CMOs-proposal
+
+
 
 
 
