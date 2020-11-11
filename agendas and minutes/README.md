@@ -5,4 +5,6 @@ Cache Management Operations
 
 Prior minutes for this TG are in email, and certain other places.
 
-TBD: collect those old minutes, and either copy them, and/or link to them.
+2020-11-11: creating placeholders for old minutes - basically empty files
+* recording that meeting was held
+* TBD: copy/move, and/or provide links to existing minutes/material
