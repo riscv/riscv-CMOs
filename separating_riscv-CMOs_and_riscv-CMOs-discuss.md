@@ -1,6 +1,6 @@
 Whining:
 
-Should this WIP entry be inthe isse tracker, wiki, or repo admin/WIP?  yes/bo to all. 
+Should this WIP entry be inthe isse tracker, wiki, or repo admin/WIP?  yes/no/maybe to all. 
 
 Damn, I hate GitHub's limitations! 
 
