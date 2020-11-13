@@ -1,10 +1,13 @@
 Whining:
 
 Should this WIP entry be inthe isse tracker, wiki, or repo admin/WIP?  yes/bo to all. 
-Damn, I hate GitHub's limitations! The wiki doesn't have subdirectories, so gets messy.  
+
+Damn, I hate GitHub's limitations! 
+
+The wiki doesn't have subdirectories, so gets messy.   
 The repo supports Markdown, but not wiki style [link targets that do not exist yet]. 
-The issue tracker is messy, like so many issue trackers.
-Oh, for twiki or fiswiki...)
+The issue tracker gets messy, like so many issue trackers.
+Oh, for twiki or foswiki... Or for MEMEX, as we may think
 
 ---
 
