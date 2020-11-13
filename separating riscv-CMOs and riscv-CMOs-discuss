@@ -1,0 +1,18 @@
+[test] [[test2]]
+
+Originally:  single repo+wiki riscv-CMOs, containing both proposal and wiki.
+
+Want: 
+* TG members able to post to wiki
+* but draft proposals, minutes, etc., writeable by opnly a few people. 
+
+Since GitHub access control seems to ve per-repo, we are splitting the original repo into two:
+
+riscv-CMOs
+* to contain protected stuff like drafys and minutes
+
+riscv-CMOs-discuss 
+* writeable by TG mrmbers
+* e.g. wiki
+   * TBD: publish how TG members can gain wiki post access
+
