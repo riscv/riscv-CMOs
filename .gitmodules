@@ -1,3 +1,6 @@
 [submodule "riscv-CMOs.wiki"]
 	path = riscv-CMOs.wiki
 	url = git@github.com:riscv/riscv-CMOs.wiki.git
+[submodule "riscv-CMOs-discuss"]
+	path = riscv-CMOs-discuss
+	url = git@github.com:riscv/riscv-CMOs-discuss.git
