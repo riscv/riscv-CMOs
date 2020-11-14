@@ -10,6 +10,34 @@ Cache Management Operations (CMOs) for RISC-V
 * TBD: riscv mailing list
 
 
+## related GitHub repos and wikis for CMOs TG
+
+* top: https://github.com/riscv/riscv-CMOs
+   * for admin stuff like minutes, drafts
+   * top-wiki: https://github.com/riscv/riscv-CMOs/wiki
+* discuss: https://github.com/riscv/riscv-CMOs-discuss
+   * members can add/change
+   * mainly in wiki: top-wiki: https://github.com/riscv/riscv-CMOs-discuss/wiki
+
+* git clone --recurse git@github.com:riscv/riscv-CMOs.git
+=> 
+```
+$> tree -d riscv-CMOs/
+riscv-CMOs/
+|-- admin
+|-- agendas-and-minutes
+|-- discussion-files
+|-- riscv-CMOs-discuss
+|   |-- discussion-files
+|   `-- riscv-CMOs-discuss.wiki
+`-- riscv-CMOs.wiki
+    |-- files
+    `-- skins
+```
+
+Note that riscv-CMOs/wiki and riscv-CNOs-discuss/wiki are duplicated (artifact of original creation 2020-11-13, should be ceaned up soon),
+as are some reated files referred to by wiki.
+
 ## Wiki-centric
 
 The active work on the proposal is in the wiki.
