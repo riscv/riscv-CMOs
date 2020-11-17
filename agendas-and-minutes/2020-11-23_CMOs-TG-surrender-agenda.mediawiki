@@ -1,5 +1,7 @@
 Agenda suggested by DK and Ag for meeting.
 
+__TOC__
+
 # Item #0 - administrivia 
 
 Separate GitHub repos  have been set up
