@@ -1,0 +1,92 @@
+Agenda suggested by DK and Ag for meeting.
+
+# Item #0 - administrivia 
+
+Separate GitHub repos  have been set up
+* https://github.com/riscv/riscv-CMOs
+* https://github.com/riscv/riscv-CMOs-discuss 
+
+To post to -discuss you need a GitHub accouunt, and then email Ag or DK.
+
+Repos originally cloned, WIOP to diverge.
+
+ 
+
+# Item #1 - Surrender wrt Range Oriented CMO.UR and CMO.AR
+
+In the interests of making progrsss on other issues, and unblocking I/D consistency (DW) J-extension
+
+Am reworking spec rework spec for CBO.EA, CBO.UX, CMO.ALL
+
+Will leave CMO.UR and CMO.UX in for now, but heavily flag - just to collect input.
+
+Encodings: would like to set RD=X0, to permit CMO.UR or CMO.AR in future (if we eventually go that way, as Ag/KA/AW hope.)
+
+TBD: discovery.
+
+Fall-out: CMO.ALL perf
+
+## Item #1' - different block sizes for INVAL and FLUSH
+
+4-sector cache -- CBO.INVAL.{EA,UX} could easily be faster than CBO.FLUSH.{EA,UX}.
+Performance matters... especially if used for security
+
+DK thinks Ag is just trying to sneak ranges in by the back door.
+
+
+
+# Item #2 - Use case for Power Mgmt/Persistence
+
+Q: does this mean more levels than
+* POC(P*)  <-- SW coherency
+* POC(P*,IO*)  <-- IO
+
+
+# Bonus Time
+
+## legal transformations of CMOs
+
+Is it legal for an implementation to transform CLEAN --> FLUSH?
+* AFAIK yes
+
+Is it legal for an implementation to transform INVAL --> FLUSH?
+* Yes, for DMA I/O
+* Defeats purpose for performance.
+
+Separate instances within use case
+* Flush dirty data, so that it doesn't overwrite non-coherent writes from others
+** FLUSH
+** INVAL - if you don't care about data in cache
+*** Advanced: Safer Inval / Clean and Zero
+* Eliminate Stale Data (should be no dirty data)
+** CLEAN
+** INVAL - if you don't care about data in cache
+** Advanced: INVAL-CLERAN (not dirty)
+
+On a WT cache 
+* FLUSH == INVAL
+* CLEAN == NOP
+
+When using CMOs for performance, can they be ignored?
+* A: Yes? ... but would require separate instruction encodings
+* advisory/hint vs mandatory 
+	
+## local/global
+* "local" => flush path from P to $ specified...
+* "global" == flush all in coherence domain
+
+* obviously, noncoherent => "local"
+* obviously(?), noncoherent I/O use cases => global (flush all in coherence domain)
+
+Q: do we provide separate encodings? ... for local/global
+    
+Who might ever want to have both global and local?
+* Global: NC I/O
+* Local:
+** performance (performance wants full control)
+*** e.g. producer/consumer performance through shared coherent cache
+
+Observation: no local operations on coherent system => non-coherent may be faster
+* Glew opinion: 
+** I would like to make coherent as fast as possible, approaching non-coherent in as many cases as possible
+** I would like to remove performance as a reason not to do coherent. 
