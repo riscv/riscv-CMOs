@@ -1,0 +1,41 @@
+Item #1
+
+Glew "surrenders" (strategic withdrawal) wrt CMO.UR and CMO.AR
+=> plan to rework spec for CBO.EA, CBO.UX, CMO.ALL
+(whole CMO.UR and CMO.AR off)
+
+suggested encodings
+
+
+Item #2
+
+Use case for Power Mgmt/Persistence
+
+Q: does this mean more levels than
+POC(P*)  <-- SW coherency
+POC(P*,IO*)  <-- IO
+
+
+Bonus Time
+
+	
+legal transformations
+
+		advisory/hint vs mandatory 
+	
+		transformations: upgrade/downgrade
+		
+		clean->flush
+			WT … -> invalidate
+			
+    perf optimization all NOPed
+
+
+
+local/global
+  do we provide separate encodingas
+ 
+  Performance
+    producer/consumer through coherent cache
+    => this means local/global
+    
