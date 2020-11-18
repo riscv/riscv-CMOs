@@ -14,7 +14,7 @@ Repos originally cloned, WIOP to diverge.
 
  
 
-# Item #1 - Surrender wrt Range Oriented CMO.UR and CMO.AR
+= Item #1 - Surrender wrt Range Oriented CMO.UR and CMO.AR =
 
 In the interests of making progrsss on other issues, and unblocking I/D consistency (DW) J-extension
 
@@ -28,7 +28,7 @@ TBD: discovery.
 
 Fall-out: CMO.ALL perf
 
-## Item #1' - different block sizes for INVAL and FLUSH
+== Item #1' - different block sizes for INVAL and FLUSH ==
 
 4-sector cache -- CBO.INVAL.{EA,UX} could easily be faster than CBO.FLUSH.{EA,UX}.
 Performance matters... especially if used for security
@@ -37,16 +37,24 @@ DK thinks Ag is just trying to sneak ranges in by the back door.
 
 
 
-# Item #2 - Use case for Power Mgmt/Persistence
+== Item #2 - Use case for Power Mgmt/Persistence ==
+
+Flush vs Clean ... to whatever level will persist
+* e.g. to battery backed DRAM
+* e.g. to persistence cache, if removing power from some (but not all) CPUs
+* NVRAM
+** multiple levwels... 1st copy, RAID, Remote
+** 
+
 
 Q: does this mean more levels than
 * POC(P*)  <-- SW coherency
 * POC(P*,IO*)  <-- IO
 
 
-# Bonus Time
+= Bonus Time =
 
-## legal transformations of CMOs
+== legal transformations of CMOs ==
 
 Is it legal for an implementation to transform CLEAN --> FLUSH?
 * AFAIK yes
@@ -73,7 +81,7 @@ When using CMOs for performance, can they be ignored?
 * A: Yes? ... but would require separate instruction encodings
 * advisory/hint vs mandatory 
 	
-## local/global
+== local/global ==
 * "local" => flush path from P to $ specified...
 * "global" == flush all in coherence domain
 
