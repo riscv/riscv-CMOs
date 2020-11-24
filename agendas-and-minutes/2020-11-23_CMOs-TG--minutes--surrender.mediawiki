@@ -49,23 +49,33 @@ Fall-out: CMO.ALL perf
 
 
 
-== STOPPED BEFORE HERE: Item #2 - Use case for Power Mgmt/Persistence ==
+= STOPPED BEFORE HERE: Item #2 - Use case for Power Mgmt/Persistence =
 
 After item #1, I started to  move on to item #2 from the agenda,  but we quickly returned to sub issues of item #1.
 
 Note that I struck out item #1'  from the agenda,  figuring that would be contentious.
 
-== Item #1 sub-issues ==
+= Item #1 sub-issues =
 
 I mentioned in passing the instruction formats I had sent in email last week when I "surrendered", and I got jumped on.
 
-=== addressing modes for CBOs? ===
+== addressing modes for CBOs? ==
 
 I mentioned in passing the instruction formats I had sent in email last week when I "surrendered" 
 * M[rs1+imm12]
 ** M[rs1+imm12] addressing mode for block prefetches 
 ** maybe M[rs1+imm12] for one or a few CMO suitable for loops
+ 
 ** M[rs1]  when we run out of expensive M[rs1+imm12]  instruction encodings
+
+== ELIMINATE ==-=
+IIRC the prefethes were intended to be
+* ANDI x0, rs1,imm12 - PREGDETCH.R
+* ORI x0, rs1,imm12 = PREFETCH.W
+* XOR x0 rts1, imm1 - FUGGEDABOUT CMO setlru  
+
+Totally unrelated 
+
 
 Much objection to providing a full address mode M[rs1+imm12]
 * POR: M[rs1] only addressing for all PREFETCHEs and CBOs
@@ -78,9 +88,9 @@ TBD: link to those encodings.
 
 TBD: IIRC those encodings are what is used in the original proposal
 
-=== RD or not RD ===
+== RD or not RD ==
 
-The email I sent out last week proposed and instruction encoding that had RD equals X0.
+The email I sent out last week proposed and instruction encoding that had RD=X0.
 
 Objection raised that in order  to allow cache line size to change over time, e.g. during  migration between CPUs,  one of the proposals  was to haave the CMO instruction return something related to the cache line size. ( exact details have been discussed in the wiki, the earlier proposal, and email  prior to undoubtedly after this meeting)
 
@@ -88,9 +98,9 @@ I was a bit surprised, since it was my understanding that one of the biggest obj
 
 Nevertheless, we agreed that the POR should be:
  
- 1.  for an instruction encoding that contains an RD field
+1.  we ask for an instruction encoding that contains an RD field
   
- 2.  at this point in time, require RD=X0
+2.  at this point in time, require RD=X0
  
 Preserve the possibility of using RD<>X0 fields in the future
 
@@ -100,9 +110,9 @@ Much of the  discussion/argumentation was related to unfamiliarity with the RISC
 
 There are two primary candidate instruction  encoding formats for CMOs
  
-* R-format:  containing RD, RS1, and RS2
-* I-format:  containing RD, RS1, and IMM12.
- 
+* R-type:  containing RD, RS1, and RS2
+* I-type:  containing RD, RS1, and IMM12.
+
 If we are to use either of these formats,  RS1 will  undoubtedly be used in forming the address.
  
 The RD field is possible,  and it is most natural to require RD=X0, as discussed in the previous item.
@@ -110,14 +120,19 @@ The RD field is possible,  and it is most natural to require RD=X0, as discussed
 Whether we use an R-format instruction or an I-format instruction is ...  fairly arbitrary.  See one of the other items up above wrt M[rs2+imm12].  unless the IMM12 or RS2 fields are used for something  related to their normal use, those bits are available to distinguish encodings.
 
 Since people jumped up and down about not using IMM12,  my understanding of the "POR" is that  we will ask for an R format instruction,  and require RD=X0, and RS2=X0,  leaving those fields available for future use, whether by the CMOs  TG or by some other group.
+
+Not yet POR: I-type or R-type
  
- 
+TBD-RM: DW: "RS2 is a terrible thing to waste" - TBD email
+* e.g. RS2 to contain cache level, etc.
+
+== TBD: discussion  loops ==
+
+anchor bias
 
 === CMO.ALL semantics ===
 
-We very briefly touched on CMO.ALL semantics
-
-I expressed "obviously"  the following implementations were possible:
+We very briefly touched on CMO.ALL semantics. I expressed "obviously"  the following implementations were possible:
 
 *  trap and emulate
 **  an objection was raised about migration during trap and emulate
@@ -129,12 +144,65 @@ I expressed "obviously"  the following implementations were possible:
  
 I said that  obviously the code sequence I expected
 
- b    ....
+      ....
       CMO.ALL
       ...
       COMPLETION FENCE
       ...
       
- permits asynchronous FSN's.
+ permits asynchronous FSM's.
  
- "Obviously"  I was premature
+ "Obviously"  I was premature.
+ 
+ It was reported that a major RISC-V company's CMOs are FSM blocking only.
+ 
+ JI thinks that asynch CMO.ALL might be bad - invalidation etc.  He says that all existing Ri5 invalidation ops, like SFENCE.VMA, are self fencing.  E.g. one does not do  TLBFLUSH A1, ... A2 then 
+ 
+ -+ DK distinction between blocking vs 
+ 
+ interruptable
+ 
+ preemptable
+ 
+ DK: FENCE.I and SFENCE.VMA expici/implicit accesses.
+ 
+ 
+    CMO.ALL
+    STORE M[x] := 1
+
+    SFENCE.VMA
+    STORE M[x] := 1
+
+ ---+ STOPPING POINT
+ 
+ Ag wonders about "equivalence" CMO.ALL and CBO.UX
+ 
+ is
+ 
+       CMO.ALL
+       
+ equivalent to
+ 
+       FOR x IN ALL cache entries
+             CBO.UX x
+       /// CBO.UX not self febcing
+       COMPLETION FENCE
+
+=> async FSMs can happen
+
+      CMO.ALL
+      ...
+      COMPLETION FENCE
+
+=> machine check
+
+---+ 
+What about levels of interaction
+
+ CMO.FLUSH.DRAM
+ COMPLETION.FENCE.L3
+
+DK: all CMOs up to this point
+
+
+
