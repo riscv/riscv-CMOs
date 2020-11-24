@@ -1,11 +1,25 @@
-Agenda suggested by DK and Ag for meeting.
- 
-[[2020-11-23_CMOs-TG--agenda--surrender.mediawiki|agenda]]
-[[2020-11-23_CMOs-TG--minutes--surrender.mediawiki|minutes]]
+Compared to the original [[2020-11-23_CMOs-TG--agenda--surrender.mediawiki|agenda]] -  as usual, we did not get to all agenda items. But we did obtain some clarity on the first technical issue.
 
 __TOC__
 
+= Links =
+[[2020-11-23_CMOs-TG--agenda--surrender.mediawiki|agenda]]
+[[2020-11-23_CMOs-TG--minutes--surrender.mediawiki|minutes]]
+[[https://d.docs.live.net/311e2d4493ae34c3/OneNote/RISC-V%20Publius%20Glew/CMOs%20TG/Meetings.one#2020-11-23_CMOs-TG--minutes--surrender.mediawiki&section-id={BB3604E3-6255-4D3A-8FA0-AF3A32B3BF75}&page-id={117B1C00-08C3-4E41-871B-BE421E675C59}&end|raw notes]]
+
+= Item -1 - RVIA CTO - MarkH =
+As usual, MarkH  started the first 10 minutes or so discussinng the changes to the RISC-V international organization,  the group contributor model, restructuring and renaming.
+
+TBD: MarkH  says that documents of this will be coming soon.
+
+ Particularly relevant to the CMOs: the "RIOS lab"  may  be able to help with formal model for CMOs.
+ 
+ (TBD:  I did not quite catch the name of this "RIOS lab")
+
+
 = Item #0 - administrivia =
+
+DONE: Essentially as in  agenda
 
 Separate GitHub repos  have been set up
 * https://github.com/riscv/riscv-CMOs
@@ -13,11 +27,13 @@ Separate GitHub repos  have been set up
 
 To post to -discuss you need a GitHub accouunt, and then email Ag or DK.
 
-Repos originally cloned, WIOP to diverge.
+Repos originally cloned, WIP to diverge.
 
  
 
 = Item #1 - Surrender wrt Range Oriented CMO.UR and CMO.AR =
+
+*From the Agenda:*
 
 In the interests of making progrsss on other issues, and unblocking I/D consistency (DW) J-extension
 
@@ -31,75 +47,94 @@ TBD: discovery.
 
 Fall-out: CMO.ALL perf
 
-== Item #1' - different block sizes for INVAL and FLUSH ==
-
-4-sector cache -- CBO.INVAL.{EA,UX} could easily be faster than CBO.FLUSH.{EA,UX}.
-Performance matters... especially if used for security
-
-DK thinks Ag is just trying to sneak ranges in by the back door.
 
 
+== STOPPED BEFORE HERE: Item #2 - Use case for Power Mgmt/Persistence ==
 
-== Item #2 - Use case for Power Mgmt/Persistence ==
+After item #1, I started to  move on to item #2 from the agenda,  but we quickly returned to sub issues of item #1.
 
-Flush vs Clean ... to whatever level will persist
-* e.g. to battery backed DRAM
-* e.g. to persistence cache, if removing power from some (but not all) CPUs
-* NVRAM
-** multiple levwels... 1st copy, RAID, Remote
-** 
+Note that I struck out item #1'  from the agenda,  figuring that would be contentious.
 
+== Item #1 sub-issues ==
 
-Q: does this mean more levels than
-* POC(P*)  <-- SW coherency
-* POC(P*,IO*)  <-- IO
+I mentioned in passing the instruction formats I had sent in email last week when I "surrendered", and I got jumped on.
 
+=== addressing modes for CBOs? ===
 
-= Bonus Time =
+I mentioned in passing the instruction formats I had sent in email last week when I "surrendered" 
+* M[rs1+imm12]
+** M[rs1+imm12] addressing mode for block prefetches 
+** maybe M[rs1+imm12] for one or a few CMO suitable for loops
+** M[rs1]  when we run out of expensive M[rs1+imm12]  instruction encodings
 
-== legal transformations of CMOs ==
+Much objection to providing a full address mode M[rs1+imm12]
+* POR: M[rs1] only addressing for all PREFETCHEs and CBOs
+** only if need proven: PREFETCH M[rs1+imm12] 
+*** studies…
 
-Is it legal for an implementation to transform CLEAN --> FLUSH?
-* AFAIK yes
+Subsequent email discussions...  amongst other things pointing out that RISC-V anticipated from the beginning that there would be certain  software prefetch instructions that have RD=x0, RS1+imm12.
 
-Is it legal for an implementation to transform INVAL --> FLUSH?
-* Yes, for DMA I/O
-* Defeats purpose for performance.
+TBD: link to those encodings.
 
-Separate instances within use case
-* Flush dirty data, so that it doesn't overwrite non-coherent writes from others
-** FLUSH
-** INVAL - if you don't care about data in cache
-*** Advanced: Safer Inval / Clean and Zero
-* Eliminate Stale Data (should be no dirty data)
-** CLEAN
-** INVAL - if you don't care about data in cache
-** Advanced: INVAL-CLERAN (not dirty)
+TBD: IIRC those encodings are what is used in the original proposal
 
-On a WT cache 
-* FLUSH == INVAL
-* CLEAN == NOP
+=== RD or not RD ===
 
-When using CMOs for performance, can they be ignored?
-* A: Yes? ... but would require separate instruction encodings
-* advisory/hint vs mandatory 
-	
-== local/global ==
-* "local" => flush path from P to $ specified...
-* "global" == flush all in coherence domain
+The email I sent out last week proposed and instruction encoding that had RD equals X0.
 
-* obviously, noncoherent => "local"
-* obviously(?), noncoherent I/O use cases => global (flush all in coherence domain)
+Objection raised that in order  to allow cache line size to change over time, e.g. during  migration between CPUs,  one of the proposals  was to haave the CMO instruction return something related to the cache line size. ( exact details have been discussed in the wiki, the earlier proposal, and email  prior to undoubtedly after this meeting)
 
-Q: do we provide separate encodings? ... for local/global
-    
-Who might ever want to have both global and local?
-* Global: NC I/O
-* Local:
-** performance (performance wants full control)
-*** e.g. producer/consumer performance through shared coherent cache
+I was a bit surprised, since it was my understanding that one of the biggest objections to having range based CMOs was that CMOs on a store pipe do not want to write multi bit values. (SC writes a simhgle bit value,  and on  some implementations is done in the load pipe.) 
 
-Observation: no local operations on coherent system => non-coherent may be faster
-* Glew opinion: 
-** I would like to make coherent as fast as possible, approaching non-coherent in as many cases as possible
-** I would like to remove performance as a reason not to do coherent. 
+Nevertheless, we agreed that the POR should be:
+ 
+ 1.  for an instruction encoding that contains an RD field
+  
+ 2.  at this point in time, require RD=X0
+ 
+Preserve the possibility of using RD<>X0 fields in the future
+
+=== Instruction Encodings for CMOs ===
+
+Much of the  discussion/argumentation was related to unfamiliarity with the RISC-V instruction encodings. In subsequent email this was discussed with actual data rather than hearsay.  That discussion was still running as I write these notes, but AFAICT:
+
+There are two primary candidate instruction  encoding formats for CMOs
+ 
+* R-format:  containing RD, RS1, and RS2
+* I-format:  containing RD, RS1, and IMM12.
+ 
+If we are to use either of these formats,  RS1 will  undoubtedly be used in forming the address.
+ 
+The RD field is possible,  and it is most natural to require RD=X0, as discussed in the previous item.
+ 
+Whether we use an R-format instruction or an I-format instruction is ...  fairly arbitrary.  See one of the other items up above wrt M[rs2+imm12].  unless the IMM12 or RS2 fields are used for something  related to their normal use, those bits are available to distinguish encodings.
+
+Since people jumped up and down about not using IMM12,  my understanding of the "POR" is that  we will ask for an R format instruction,  and require RD=X0, and RS2=X0,  leaving those fields available for future use, whether by the CMOs  TG or by some other group.
+ 
+ 
+
+=== CMO.ALL semantics ===
+
+We very briefly touched on CMO.ALL semantics
+
+I expressed "obviously"  the following implementations were possible:
+
+*  trap and emulate
+**  an objection was raised about migration during trap and emulate
+**  this objection was quickly squatted down, because trap and emulate is either in M mode or system code, which has control of migration
+
+* synch FSM (or ucode)  blocking at retirement
+
+* asynch FSM 
+ 
+I said that  obviously the code sequence I expected
+
+ b    ....
+      CMO.ALL
+      ...
+      COMPLETION FENCE
+      ...
+      
+ permits asynchronous FSN's.
+ 
+ "Obviously"  I was premature
