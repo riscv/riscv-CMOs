@@ -234,6 +234,8 @@ which will only be created when a TG member follows the link and starts writing.
 * [[../../../../riscv-CMOs-discuss/wiki/should-CBOs-have-RS2-or-IMM12|should-CBOs-have-RS2-or-IMM12]]
 * [[../../../../riscv-CMOs-discuss/wiki/SW-pipelined-loops,-unrolling,-and-SWPF-addressing-modes|SW-pipelined-loops,-unrolling,-and-SWPF-addressing-modes]]
 * [[../../../../riscv-CMOs-discuss/wiki/SWPF-vs-HWPF|SWPF-vs-HWPF]]
+* [[../../../../riscv-CMOs-discuss/wiki/Prefetch-and-Flush-CMOs-for-critical-loops|Prefetch-and-Flush-CMOs-for-critical-loops]]
+* [[../../../../riscv-CMOs-discuss/wiki/is-it-or-is-it-not-okay-to-add-instructions-to-critical-loops|is-it-or-is-it-not-okay-to-add-instructions-to-critical-loops]]
 * [[../../../../riscv-CMOs-discuss/wiki/SW-flushes-in-loops|SW-flushes-in-loops]]
 * [[../../../../riscv-CMOs-discuss/wiki/CMOs-including-SWPF-and-vectors|CMOs-including-SWPF-and-vectors]]
 * [[../../../../riscv-CMOs-discuss/wiki/Non-temporal-loads-vs-CMOs-in-loops|Non-temporal-loads-vs-CMOs-in-loops]]
