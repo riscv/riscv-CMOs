@@ -184,7 +184,34 @@ than it is to have a CMO with imm12."
 
 TBD: follow-on discussions
 
+== Adding extra dynamic instructions to critical loops ==
 
+Another cultural difference:  willingness to add extra instructions to critical loops.
+(this was one of the motivations for  prefetches and other CMOs with M[rs1+imm12]).
+
+Some microarchitectures, typically high end server and a general purpose systems, are totally willing to add instructions to critical loops. E.g. they are not  sensitive the code size, because they have scads of instruction cache and memory.  they are happy to do loop unrolling.  they may have sufficient superscalar that adding a few extra instructions to do  address computations is a little cost. Or, the loops in question may have lots of idle time waiting on cache misses.
+
+However,  other microarchitectures and customers, typically in low end embedded systems and (surprise!?)  HPC systems,  are sensitive to extra instructions.   e.g. code size, FLASH and/or very small instruction caches. (Yes,  [[some embedded systems have caches -  believe it or not]].)  e.g. they may have comparatively  narrow pipelines - 1mem+1compute or 2mem+1compute -  on which it is totally reasonable to expect to achieve  nearly speed of light  performance, even in the presence of cache misses. RISC ISAs+ microarchitectures  are often compared to more specialized DSP microarchitectures in such application areas -  and the RISC ISAs often lose the comparison (and the sale) because they require additional instructions and/or loop unrolling (and because RISCs lack [[zero overhead loops]]).
+
+On such relatively narrow pipelines, every additional instruction within a critical loop can easily add to the critical loop time. And when the critical loop time,  e.g. for DAXPY or an FIR  filter,  is often only one or two cycles per  multiply-add compute instruction, completely  hiding memory latency,  every cycle added to the critical loop by an additional instruction can easily be 50% or 25% or ...  a fairly significant slowdown.
+
+This is a general principle.
+
+Q: Would  such code that is so sensitive  to additional instructions within the loop use prefetch or other CMOs?  since obviously those are extra instructions within the  critical loop.
+
+A: Not if they can help it. But often they can't help it. E.g. the cache misses may be unavoidable, and the  critical path added by the prefetch instructions is more than made up by hiding cache miss latency.
+
+Somebody said "embedded systems don't have caches, they have tightly integrated memory (TIM, SRAM)".  Again, this is true for many, but not all, embedded systems.
+It is certainly easier to  attain high utilization with TIM.  it is certainly easier to attain deterministic real-time  with TIM.
+But many workloads and customers want high efficiency, but not necessarily hard real-time.
+Caches often  make software maintenance easier,  and hence total lifecycle cost.
+If an implementation of a RISC ISA with a I&D caches can achieve high efficiency, with or without CMOs, such customers may consider.
+
+(BTW:  I hope that we will one day talk about other CMO related techniques to provide  better cache performance for embedded systems.)
+
+TBD: Although we did have this discussion in the meeting, the above should probably be re-factored into the wiki.
+
+ 
 
 == CMO.ALL semantics ==
 
