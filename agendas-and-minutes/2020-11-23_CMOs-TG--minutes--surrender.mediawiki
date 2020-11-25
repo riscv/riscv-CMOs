@@ -7,9 +7,10 @@ __TOC__
 [[2020-11-23_CMOs-TG--minutes--surrender.mediawiki|minutes]]
 [[https://onedrive.live.com/redir?resid=311E2D4493AE34C3%21137&authkey=%21AL2wLNKLCyX8qMk&page=View&wd=target%28CMOs%20TG%2FMeetings.one%7Cbb3604e3-6255-4d3a-8fa0-af3a32b3bf75%2F2020-11-23_CMOs-TG-%7C117b1c00-08c3-4e41-871b-be421e675c59%2F%29&wdorigin=703|raw notes]]
 
+Please tell me if you can or cannot access the raw notes. They should be readable to the world, if I have set things up properly.
+
 = Item #-1 - RVIA CTO - MarkH =
 As usual, MarkH  started the first 10 minutes or so discussing the changes to the RISC-V international organization,  the group contributor model, restructuring and renaming.
-
 
 Particularly relevant to the CMOs: the "RIOS lab"  may  be able to help with formal model for CMOs.
 
