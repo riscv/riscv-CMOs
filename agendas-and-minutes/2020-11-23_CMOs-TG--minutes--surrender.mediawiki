@@ -209,7 +209,7 @@ I said that "obviously" the code sequence I expected  permits asynchronous FSMs.
       COMPLETION FENCE
       ...
 </pre>
- 
+
 "Obviously"  I was premature.
 
 It was reported that a major RISC-V company's CMOs are FSM blocking only.
@@ -241,5 +241,3 @@ which will only be created when a TG member follows the link and starts writing.
 * [[../../../../riscv-CMOs-discuss/wiki/CMO.ALL-asynch,-non-blocking,-self-fencing|CMO.ALL-asynch,-non-blocking,-self-fencing]]
 * [[../../../../riscv-CMOs-discuss/wiki/CMOs-migration|CMOs-migration]]
 * [[../../../../riscv-CMOs-discuss/wiki/CMOs,-interruptability,-preemptability,-migratability|CMOs,-interruptability,-preemptability,-migratability]]
-
-
