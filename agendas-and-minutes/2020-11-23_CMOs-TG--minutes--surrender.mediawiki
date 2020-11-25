@@ -5,7 +5,7 @@ __TOC__
 = Links =
 [[2020-11-23_CMOs-TG--agenda--surrender.mediawiki|agenda]]
 [[2020-11-23_CMOs-TG--minutes--surrender.mediawiki|minutes]]
-[[https://d.docs.live.net/311e2d4493ae34c3/OneNote/RISC-V%20Publius%20Glew/CMOs%20TG/Meetings.one#2020-11-23_CMOs-TG--minutes--surrender.mediawiki&section-id={BB3604E3-6255-4D3A-8FA0-AF3A32B3BF75}&page-id={117B1C00-08C3-4E41-871B-BE421E675C59}&end|raw notes]]
+[[https://onedrive.live.com/redir?resid=311E2D4493AE34C3%21137&authkey=%21AL2wLNKLCyX8qMk&page=View&wd=target%28CMOs%20TG%2FMeetings.one%7Cbb3604e3-6255-4d3a-8fa0-af3a32b3bf75%2F2020-11-23_CMOs-TG-%7C117b1c00-08c3-4e41-871b-be421e675c59%2F%29&wdorigin=703|raw notes]]
 
 = Item -1 - RVIA CTO - MarkH =
 As usual, MarkH  started the first 10 minutes or so discussinng the changes to the RISC-V international organization,  the group contributor model, restructuring and renaming.
