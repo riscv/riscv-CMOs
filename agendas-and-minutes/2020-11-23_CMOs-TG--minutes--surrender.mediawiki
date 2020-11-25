@@ -64,8 +64,8 @@ In the surrender email, I suggested:
 * M[rs1+imm12]
 ** M[rs1+imm12] addressing mode for block prefetches 
 ** maybe M[rs1+imm12] for one or a few CMO suitable for loops
- 
-** M[rs1]  when we run out of expensive M[rs1+imm12]  instruction encodings
+
+* M[rs1]  when we run out of expensive M[rs1+imm12]  instruction encodings
 
 Much objection to providing a full address mode M[rs1+imm12]
 * POR: M[rs1] only addressing for all PREFETCHEs and CBOs
@@ -89,11 +89,11 @@ to having range based CMOs was that CMOs on a store pipe do not want to write mu
 (SC writes a single bit value,  and on  some implementations is done in the load pipe.) 
 
 Nevertheless, we agreed that the POR should be:
- 
+
 1.  we ask for an instruction encoding that contains an RD field
-  
+
 2.  at this point in time, require RD=X0
- 
+
 Preserve the possibility of using RD<>X0 fields in the future
 
 == Instruction Encodings for CMOs ==
@@ -103,14 +103,14 @@ In subsequent email this was discussed with actual data rather than hearsay.
 That discussion was still running as I write these notes, but AFAICT:
 
 There are two primary candidate instruction  encoding formats for CMOs
- 
+
 * R-type:  containing RD, RS1, and RS2
 * I-type:  containing RD, RS1, and IMM12.
 
 If we are to use either of these formats,  RS1 will  undoubtedly be used in forming the address.
- 
-The RD field is possible,  and it is most natural to require RD=X0, as discussed in the previous item.
- 
+
+The RD field is possible,  and it is  natural to require RD=X0 for now, as discussed in the previous item.
+
 Whether we use an R-format instruction or an I-format instruction is ...  fairly arbitrary.  
 See one of the other items up above wrt M[rs2+imm12].  
 Unless the IMM12 or RS2 fields are used for something  related to their normal use, those bits are available to distinguish encodings.
@@ -146,7 +146,7 @@ Software Pipelining:
 ** stores may be for iteration I, 
 ** loads for iteration J, 
 ** prefetches for K, 
-** I<J<K, 
+** I < J < K, 
 *** J-I related to compute latency
 *** K-I related to prefetch leadtime needed to cover cache miss latency.
 
@@ -202,16 +202,16 @@ Trap and emulate:
 
 I said that "obviously" the code sequence I expected  permits asynchronous FSMs.
 
-<nowiki>
+<pre>
       ....
       CMO.ALL
       ...
       COMPLETION FENCE
       ...
-</nowiki>
-      
-"Obviously"  I was premature.
+</pre>
  
+"Obviously"  I was premature.
+
 It was reported that a major RISC-V company's CMOs are FSM blocking only.
 With the feeling that this was not just an implementation decision,
 but that it should also be an architectural decision.
