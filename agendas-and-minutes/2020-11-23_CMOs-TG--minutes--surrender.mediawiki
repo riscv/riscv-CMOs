@@ -224,7 +224,7 @@ each TLBFLUSH self fencing (wrt page table walks).
 
 = Wiki followups? =
 
-These minutes, which live in the RISC-V CMOs TG [[https:github.com/riscv/riscv-CMOs}repo]]
+These minutes, which live in the RISC-V CMOs TG GitHub [[https:github.com/riscv/riscv-CMOs|repo]]
 contain links to pages in the associated [[../../../../riscv-CMOs-discuss/wiki|riscv-CMOs-discuss/wiki]]
 which will only be created when a TG member follows the link and starts writing.
 
