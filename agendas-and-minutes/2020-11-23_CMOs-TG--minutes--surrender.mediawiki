@@ -209,7 +209,7 @@ If an implementation of a RISC ISA with a I&D caches can achieve high efficiency
 
 (BTW:  I hope that we will one day talk about other CMO related techniques to provide  better cache performance for embedded systems.)
 
-TBD: Although we did have this discussion in the meeting, the above should probably be re-factored into the wiki.
+TBD: Although we did have this discussion in the meeting, the above should probably be re-factored into the wiki.  It is unfair for I, your humble secretary, to take advantage of writing the  minutes to explain in more detail.
 
  
 
