@@ -9,7 +9,7 @@ __TOC__
 
 Please tell me if you can or cannot access the raw notes. They should be readable to the world, if I have set things up properly.
 
-[[../../wiki/foo]]
+[[../../../wiki/README.md]]
 
 = Item #-1 - RVIA CTO - MarkH =
 As usual, MarkH  started the first 10 minutes or so discussing the changes to the RISC-V international organization,  the group contributor model, restructuring and renaming.
