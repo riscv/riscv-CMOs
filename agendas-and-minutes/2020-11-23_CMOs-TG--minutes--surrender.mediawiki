@@ -93,7 +93,7 @@ Nevertheless, we agreed that the POR should be:
  
 Preserve the possibility of using RD<>X0 fields in the future
 
-=== Instruction Encodings for CMOs ===
+== Instruction Encodings for CMOs ==
 
 Much of the  discussion/argumentation was related to unfamiliarity with the RISC-V instruction encodings. 
 In subsequent email this was discussed with actual data rather than hearsay.  
@@ -183,7 +183,7 @@ TBD: follow-on discussions
 
 
 
-== CMO.ALL semantics ===
+== CMO.ALL semantics ==
 
 Towards the very end, we very briefly touched on CMO.ALL semantics. 
 
@@ -217,7 +217,3 @@ Along the lines of the existing Ri5 invalidation ops like FENCE.I and SFENCE.VMA
 E.g. in RISC-V one does not do `TLBFLUSH A1; TLBFLUSH A2; ...` i.e. one cannot batch up a number of TLB flushes, possibly other stuff
 and then do a fence to ensure that the TLBFLUSHes are all done. Instead, RISC-V one does `sfence.vma A1; sfence.vma a2; ...`, 
 each TLBFLUSH self fencing (wrt page table walks).
-
-
- 
- 
