@@ -9,11 +9,9 @@ __TOC__
 
 Please tell me if you can or cannot access the raw notes. They should be readable to the world, if I have set things up properly.
 
-
-[[../../../wiki|wiki]]
-[[../../../wiki/Home.md|wiki home]]
-[[../../../wiki/new-page|new-page]]
-
+These minutes, which live in the RISC-V CMOs TG [[https:github.com/riscv/riscv-CMOs}repo]]
+contain links to pages in the associated [[../../../../riscv-CMOs-discuss/wiki|riscv-CMOs-discuss/wiki]]
+which will only be created when somebofy follows the lionk and starts writing.
 
 = Item #-1 - RVIA CTO - MarkH =
 As usual, MarkH  started the first 10 minutes or so discussing the changes to the RISC-V international organization,  the group contributor model, restructuring and renaming.
