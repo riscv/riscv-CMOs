@@ -9,10 +9,6 @@ __TOC__
 
 Please tell me if you can or cannot access the raw notes. They should be readable to the world, if I have set things up properly.
 
-These minutes, which live in the RISC-V CMOs TG [[https:github.com/riscv/riscv-CMOs}repo]]
-contain links to pages in the associated [[../../../../riscv-CMOs-discuss/wiki|riscv-CMOs-discuss/wiki]]
-which will only be created when somebofy follows the lionk and starts writing.
-
 = Item #-1 - RVIA CTO - MarkH =
 As usual, MarkH  started the first 10 minutes or so discussing the changes to the RISC-V international organization,  the group contributor model, restructuring and renaming.
 
@@ -32,11 +28,14 @@ To post to -discuss you need a GitHub accouunt, and then email Ag or DK.
 
 Repos originally cloned, WIP to diverge.
 
- 
+Agendas and minutes in [[../agendas-and-minutes]]
+* verbose: https://github.com/riscv/riscv-CMOs/blob/master/agendas-and-minutes/2020-11-23_CMOs-TG--minutes--surrender.mediawiki
+
+Names such as [[2020-11-23_CMOs-TG--minutes--surrender]].
 
 = Item #1 - Surrender wrt Range Oriented CMO.UR and CMO.AR =
 
-*From the Agenda:*
+<ul>From the Agenda, ~email:</ul>
 
 In the interests of making progress on other issues, and unblocking I/D consistency (DW) J-extension
 
@@ -48,13 +47,12 @@ Encodings: would like to set RD=X0, to permit CMO.UR or CMO.AR in future (if we 
 
 TBD: discovery.
 
+TBD: link to email.
 
 
 = STOPPED BEFORE HERE: Item #2 - Use case for Power Mgmt/Persistence =
 
-After item #1, I started to  move on to item #2 from the agenda,  but we quickly returned to sub issues of item #1.
-
-Note that I struck out item #1'  from the agenda,  figuring that would be contentious.
+After item #1, we started to  move on to item #2 from the agenda,  but we quickly returned to sub issues of item #1.
 
 = Item #1 sub-issues =
 
@@ -62,7 +60,7 @@ I mentioned in passing the instruction formats I had sent in email last week whe
 
 == addressing modes for CBOs? ==
 
-IN the surrender email, I suggested:
+In the surrender email, I suggested:
 * M[rs1+imm12]
 ** M[rs1+imm12] addressing mode for block prefetches 
 ** maybe M[rs1+imm12] for one or a few CMO suitable for loops
@@ -73,6 +71,7 @@ Much objection to providing a full address mode M[rs1+imm12]
 * POR: M[rs1] only addressing for all PREFETCHEs and CBOs
 ** only if need proven: PREFETCH M[rs1+imm12] 
 *** studies…
+
 
 Subsequent email discussions...  amongst other things pointing to the RISC-V HINT instructions, many of which have RS1 and IMM12. 
 
@@ -87,7 +86,7 @@ e.g. during  migration between CPUs,  one of the proposals  was to have the CMO 
 
 I was a bit surprised, since it was my understanding that one of the biggest objections 
 to having range based CMOs was that CMOs on a store pipe do not want to write multi bit values. 
-(SC writes a simhgle bit value,  and on  some implementations is done in the load pipe.) 
+(SC writes a single bit value,  and on  some implementations is done in the load pipe.) 
 
 Nevertheless, we agreed that the POR should be:
  
@@ -215,9 +214,31 @@ I said that "obviously" the code sequence I expected  permits asynchronous FSMs.
 It was reported that a major RISC-V company's CMOs are FSM blocking only.
 With the feeling that this was not just an implementation decision,
 but that it should also be an architectural decision.
-I.e. that the CMO.ALL would be self fencing - and no COMPLETION-FEJCE would be required for it.
+I.e. that the CMO.ALL would be self fencing - and no COMPLETION-FENCE would be required for it.
 Along the lines of the existing Ri5 invalidation ops like FENCE.I and SFENCE.VMA that are self fencing.  
 
 E.g. in RISC-V one does not do `TLBFLUSH A1; TLBFLUSH A2; ...` i.e. one cannot batch up a number of TLB flushes, possibly other stuff
 and then do a fence to ensure that the TLBFLUSHes are all done. Instead, RISC-V one does `sfence.vma A1; sfence.vma a2; ...`, 
 each TLBFLUSH self fencing (wrt page table walks).
+
+= Wiki followups? =
+
+These minutes, which live in the RISC-V CMOs TG [[https:github.com/riscv/riscv-CMOs}repo]]
+contain links to pages in the associated [[../../../../riscv-CMOs-discuss/wiki|riscv-CMOs-discuss/wiki]]
+which will only be created when a TG member follows the link and starts writing.
+
+* [[../../../../riscv-CMOs-discuss/wiki/addressing-modes-for-CBOs|addressing-modes-for-CBOs]]
+* [[../../../../riscv-CMOs-discuss/wiki/instruction-encodings-for-CBOs|instruction-encodings-for-CBOs]]
+* [[../../../../riscv-CMOs-discuss/wiki/should-CBOs-have-or-write-RD|should-CBOs-have-or-write-RD]]
+* [[../../../../riscv-CMOs-discuss/wiki/should-CBOs-have-RS2-or-IMM12|should-CBOs-have-RS2-or-IMM12]]
+* [[../../../../riscv-CMOs-discuss/wiki/SW-pipelined-loops,-unrolling,-and-SWPF-addressing-modes|SW-pipelined-loops,-unrolling,-and-SWPF-addressing-modes]]
+* [[../../../../riscv-CMOs-discuss/wiki/SWPF-vs-HWPF|SWPF-vs-HWPF]]
+* [[../../../../riscv-CMOs-discuss/wiki/SW-flushes-in-loops|SW-flushes-in-loops]]
+* [[../../../../riscv-CMOs-discuss/wiki/CMOs-including-SWPF-and-vectors|CMOs-including-SWPF-and-vectors]]
+* [[../../../../riscv-CMOs-discuss/wiki/Non-temporal-loads-vs-CMOs-in-loops|Non-temporal-loads-vs-CMOs-in-loops]]
+* [[../../../../riscv-CMOs-discuss/wiki/CMO.ALL-semantics|CMO.ALL-semantics]]
+* [[../../../../riscv-CMOs-discuss/wiki/CMO.ALL-asynch,-non-blocking,-self-fencing|CMO.ALL-asynch,-non-blocking,-self-fencing]]
+* [[../../../../riscv-CMOs-discuss/wiki/CMOs-migration|CMOs-migration]]
+* [[../../../../riscv-CMOs-discuss/wiki/CMOs,-interruptability,-preemptability,-migratability|CMOs,-interruptability,-preemptability,-migratability]]
+
+
