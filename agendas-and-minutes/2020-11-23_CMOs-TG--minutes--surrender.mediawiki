@@ -200,14 +200,15 @@ Trap and emulate:
 * an objection was raised about migration during trap and emulate
 * this objection quickly met, because trap and emulate is either in M mode or system code, which has control of migration
 
- 
 I said that "obviously" the code sequence I expected  permits asynchronous FSMs.
 
+<nowiki>
       ....
       CMO.ALL
       ...
       COMPLETION FENCE
       ...
+</nowiki>
       
 "Obviously"  I was premature.
  
