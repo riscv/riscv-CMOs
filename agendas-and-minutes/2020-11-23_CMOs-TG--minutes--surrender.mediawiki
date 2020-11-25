@@ -7,15 +7,13 @@ __TOC__
 [[2020-11-23_CMOs-TG--minutes--surrender.mediawiki|minutes]]
 [[https://onedrive.live.com/redir?resid=311E2D4493AE34C3%21137&authkey=%21AL2wLNKLCyX8qMk&page=View&wd=target%28CMOs%20TG%2FMeetings.one%7Cbb3604e3-6255-4d3a-8fa0-af3a32b3bf75%2F2020-11-23_CMOs-TG-%7C117b1c00-08c3-4e41-871b-be421e675c59%2F%29&wdorigin=703|raw notes]]
 
-= Item -1 - RVIA CTO - MarkH =
-As usual, MarkH  started the first 10 minutes or so discussinng the changes to the RISC-V international organization,  the group contributor model, restructuring and renaming.
+= Item #-1 - RVIA CTO - MarkH =
+As usual, MarkH  started the first 10 minutes or so discussing the changes to the RISC-V international organization,  the group contributor model, restructuring and renaming.
+
+
+Particularly relevant to the CMOs: the "RIOS lab"  may  be able to help with formal model for CMOs.
 
 TBD: MarkH  says that documents of this will be coming soon.
-
- Particularly relevant to the CMOs: the "RIOS lab"  may  be able to help with formal model for CMOs.
- 
- (TBD:  I did not quite catch the name of this "RIOS lab")
-
 
 = Item #0 - administrivia =
 
@@ -35,7 +33,7 @@ Repos originally cloned, WIP to diverge.
 
 *From the Agenda:*
 
-In the interests of making progrsss on other issues, and unblocking I/D consistency (DW) J-extension
+In the interests of making progress on other issues, and unblocking I/D consistency (DW) J-extension
 
 Am reworking spec rework spec for CBO.EA, CBO.UX, CMO.ALL
 
@@ -44,8 +42,6 @@ Will leave CMO.UR and CMO.UX in for now, but heavily flag - just to collect inpu
 Encodings: would like to set RD=X0, to permit CMO.UR or CMO.AR in future (if we eventually go that way, as Ag/KA/AW hope.)
 
 TBD: discovery.
-
-Fall-out: CMO.ALL perf
 
 
 
@@ -61,40 +57,32 @@ I mentioned in passing the instruction formats I had sent in email last week whe
 
 == addressing modes for CBOs? ==
 
-I mentioned in passing the instruction formats I had sent in email last week when I "surrendered" 
+IN the surrender email, I suggested:
 * M[rs1+imm12]
 ** M[rs1+imm12] addressing mode for block prefetches 
 ** maybe M[rs1+imm12] for one or a few CMO suitable for loops
  
 ** M[rs1]  when we run out of expensive M[rs1+imm12]  instruction encodings
 
-== ELIMINATE ==-=
-IIRC the prefethes were intended to be
-* ANDI x0, rs1,imm12 - PREGDETCH.R
-* ORI x0, rs1,imm12 = PREFETCH.W
-* XOR x0 rts1, imm1 - FUGGEDABOUT CMO setlru  
-
-Totally unrelated 
-
-
 Much objection to providing a full address mode M[rs1+imm12]
 * POR: M[rs1] only addressing for all PREFETCHEs and CBOs
 ** only if need proven: PREFETCH M[rs1+imm12] 
 *** studies…
 
-Subsequent email discussions...  amongst other things pointing out that RISC-V anticipated from the beginning that there would be certain  software prefetch instructions that have RD=x0, RS1+imm12.
+Subsequent email discussions...  amongst other things pointing to the RISC-V HINT instructions, many of which have RS1 and IMM12. 
 
-TBD: link to those encodings.
-
-TBD: IIRC those encodings are what is used in the original proposal
 
 == RD or not RD ==
 
 The email I sent out last week proposed and instruction encoding that had RD=X0.
 
-Objection raised that in order  to allow cache line size to change over time, e.g. during  migration between CPUs,  one of the proposals  was to haave the CMO instruction return something related to the cache line size. ( exact details have been discussed in the wiki, the earlier proposal, and email  prior to undoubtedly after this meeting)
+An objection was raised that in order  to allow cache line size to change over time, 
+e.g. during  migration between CPUs,  one of the proposals  was to have the CMO instruction return something related to the cache line size. 
+(Exact details have been discussed in the wiki, the earlier proposal, and email  prior to and undoubtedly after this meeting)
 
-I was a bit surprised, since it was my understanding that one of the biggest objections to having range based CMOs was that CMOs on a store pipe do not want to write multi bit values. (SC writes a simhgle bit value,  and on  some implementations is done in the load pipe.) 
+I was a bit surprised, since it was my understanding that one of the biggest objections 
+to having range based CMOs was that CMOs on a store pipe do not want to write multi bit values. 
+(SC writes a simhgle bit value,  and on  some implementations is done in the load pipe.) 
 
 Nevertheless, we agreed that the POR should be:
  
@@ -106,7 +94,9 @@ Preserve the possibility of using RD<>X0 fields in the future
 
 === Instruction Encodings for CMOs ===
 
-Much of the  discussion/argumentation was related to unfamiliarity with the RISC-V instruction encodings. In subsequent email this was discussed with actual data rather than hearsay.  That discussion was still running as I write these notes, but AFAICT:
+Much of the  discussion/argumentation was related to unfamiliarity with the RISC-V instruction encodings. 
+In subsequent email this was discussed with actual data rather than hearsay.  
+That discussion was still running as I write these notes, but AFAICT:
 
 There are two primary candidate instruction  encoding formats for CMOs
  
@@ -117,32 +107,97 @@ If we are to use either of these formats,  RS1 will  undoubtedly be used in form
  
 The RD field is possible,  and it is most natural to require RD=X0, as discussed in the previous item.
  
-Whether we use an R-format instruction or an I-format instruction is ...  fairly arbitrary.  See one of the other items up above wrt M[rs2+imm12].  unless the IMM12 or RS2 fields are used for something  related to their normal use, those bits are available to distinguish encodings.
+Whether we use an R-format instruction or an I-format instruction is ...  fairly arbitrary.  
+See one of the other items up above wrt M[rs2+imm12].  
+Unless the IMM12 or RS2 fields are used for something  related to their normal use, those bits are available to distinguish encodings.
 
-Since people jumped up and down about not using IMM12,  my understanding of the "POR" is that  we will ask for an R format instruction,  and require RD=X0, and RS2=X0,  leaving those fields available for future use, whether by the CMOs  TG or by some other group.
+Since people jumped up and down about not using IMM12,  
+my understanding of the "POR" is that  we will ask for an R format instruction,  and require RD=X0, and RS2=X0,  
+leaving those fields available for future use, whether by the CMOs  TG or by some other group.
 
 Not yet POR: I-type or R-type
- 
-TBD-RM: DW: "RS2 is a terrible thing to waste" - TBD email
-* e.g. RS2 to contain cache level, etc.
 
-== TBD: discussion  loops ==
+See also: 
 
-anchor bias
+* "RS2 is a terrible thing to waste", 
+in DW's  presentation [[https://github.com/riscv/riscv-CMOs/blob/master/discussion-files/RISC_V_range_CMOs_bad_v1.00.pdf|Range based CMOs/CBOs considered harmful]]
 
-=== CMO.ALL semantics ===
 
-We very briefly touched on CMO.ALL semantics. I expressed "obviously"  the following implementations were possible:
+== Loops ==
 
-*  trap and emulate
-**  an objection was raised about migration during trap and emulate
-**  this objection was quickly squatted down, because trap and emulate is either in M mode or system code, which has control of migration
+Some of the instruction encoding duscussions were prompted by loop code,
+exposing cultural differences, such as the following:
 
+(This is by no means a complete list, 
+just an attempt to record that we were duscussing this topic, 
+although the discussion was ... fast ...
+I have already seen to and fro about this in the mailing list.
+If you think the following is wrong or incomplete or misl;eading, 
+tell me, and I will correct 
+and/or move this section to the wiki and mailing list
+and link.)
+
+Software Pipelining: 
+* e.g. in any DAXPY loop iteration (rolled or unrolled)
+** stores may be for iteration I, 
+** loads for iteration J, 
+** prefetches for K, 
+** I<J<K, 
+*** J-I related to compute latency
+*** K-I related to prefetch leadtime needed to cover cache miss latency.
+
+Whether this motivates M[rs1+imm12] addressing or not depends on loop unrolling.
+
+Loop unrolling:
+* server and GP guys assume loop unrolling
+* vs code size is important for embedded, so prefer not to require loop unrolling
+
+HPC:
+* "surely any HPC code will have HW prefetch engines, and not need to use SW prefetch instructions"
+* vs not all HPC processors have HW prefetch engines
+
+HPC:
+* "surely all HPC code will use the Vector extension, and hence will not need (scalar) SW prefetch instructions"
+* vs prefetches can be useful even in vector code
+
+Most or all participants were familiar with the concept of software prefetching in such array loops.
+
+Many seemed surprised by the example that included a CMO to indicate that a cache line was not going to be accessed again,
+so that it could be 
+* SETLRU'ed - marked wrt eviction priority, to reduce chances of thrashing out data that wil be used more soon.
+* FLUSH triggered at time under ninja programmer cibtrol - the sorts of guys who schedule DRAM page opens, and who ciomplained that they lost this control with WB cache
+* most aggressively, DISCARD'ing dirty data (e.g. array tmps) whose dirty data does not need to be written back.
+** obvious security issues
+** less obvious that some HPC systems know how to solve such security issues with DISCARD
+
+TBD: I (Glew) took action item to bring such issus to the RISC-V HPC SIG.
+
+One comment overheard: 
+"Why not just use a non-temporal load? 
+It's much cheaper (in terms of instruction encodings?) 
+to have a single non-temporal bit in a load instruction 
+than it is to have a CMO with imm12."
+
+TBD: follow-on discussions
+
+
+
+== CMO.ALL semantics ===
+
+Towards the very end, we very briefly touched on CMO.ALL semantics. 
+
+I (Glew) expressed "obviously"  the following implementations were possible:
+
+* trap and emulate
 * synch FSM (or ucode)  blocking at retirement
-
 * asynch FSM 
+
+Trap and emulate:
+* an objection was raised about migration during trap and emulate
+* this objection quickly met, because trap and emulate is either in M mode or system code, which has control of migration
+
  
-I said that  obviously the code sequence I expected
+I said that "obviously" the code sequence I expected  permits asynchronous FSMs.
 
       ....
       CMO.ALL
@@ -150,59 +205,18 @@ I said that  obviously the code sequence I expected
       COMPLETION FENCE
       ...
       
- permits asynchronous FSM's.
+"Obviously"  I was premature.
  
- "Obviously"  I was premature.
- 
- It was reported that a major RISC-V company's CMOs are FSM blocking only.
- 
- JI thinks that asynch CMO.ALL might be bad - invalidation etc.  He says that all existing Ri5 invalidation ops, like SFENCE.VMA, are self fencing.  E.g. one does not do  TLBFLUSH A1, ... A2 then 
- 
- -+ DK distinction between blocking vs 
- 
- interruptable
- 
- preemptable
- 
- DK: FENCE.I and SFENCE.VMA expici/implicit accesses.
- 
- 
-    CMO.ALL
-    STORE M[x] := 1
+It was reported that a major RISC-V company's CMOs are FSM blocking only.
+With the feeling that this was not just an implementation decision,
+but that it should also be an architectural decision.
+I.e. that the CMO.ALL would be self fencing - and no COMPLETION-FEJCE would be required for it.
+Along the lines of the existing Ri5 invalidation ops like FENCE.I and SFENCE.VMA that are self fencing.  
 
-    SFENCE.VMA
-    STORE M[x] := 1
-
- ---+ STOPPING POINT
- 
- Ag wonders about "equivalence" CMO.ALL and CBO.UX
- 
- is
- 
-       CMO.ALL
-       
- equivalent to
- 
-       FOR x IN ALL cache entries
-             CBO.UX x
-       /// CBO.UX not self febcing
-       COMPLETION FENCE
-
-=> async FSMs can happen
-
-      CMO.ALL
-      ...
-      COMPLETION FENCE
-
-=> machine check
-
----+ 
-What about levels of interaction
-
- CMO.FLUSH.DRAM
- COMPLETION.FENCE.L3
-
-DK: all CMOs up to this point
+E.g. in RISC-V one does not do `TLBFLUSH A1; TLBFLUSH A2; ...` i.e. one cannot batch up a number of TLB flushes, possibly other stuff
+and then do a fence to ensure that the TLBFLUSHes are all done. Instead, RISC-V one does `sfence.vma A1; sfence.vma a2; ...`, 
+each TLBFLUSH self fencing (wrt page table walks).
 
 
-
+ 
+ 
