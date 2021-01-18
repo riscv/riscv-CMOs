@@ -9,10 +9,10 @@ Cache Management Operations (CMOs) for RISC-V
 * TBD: working group
 * TBD: riscv mailing list
 
-## Proposed Charter
+## Charter
 
-The Cache Maintenance Operation, or CMO, task group intends to define data cache
-maintenance operations for the RISC-V architecture, providing support for use-cases
+The Cache Management Operation, or CMO, task group intends to define data cache
+management operations for the RISC-V architecture, providing support for use-cases
 such as software-managed cache coherence, power management, persistent storage,
 security, and RAS. In the process, a data cache model will be developed, and the
 interactions of CMOs with the memory ordering model will be specified. In addition,
