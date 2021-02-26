@@ -727,21 +727,40 @@ An implementation may write any number of bytes in the cache block atomically.
 The instruction may allocate, but is _not_ guaranteed to allocate, the cache 
 block in the cache specified by _level_.
 
-=== FIXME: Cache Block Hint Instructions
+=== Cache Block Hint Instructions
 
-These take an effective address in _rs1_ or an effective address from _rs1 + imm12_
+Cache block hint instructions operate on the cache blocks containing the 
+effective address specified in _rs1_.
+These instructions also specify a _level_, which is a hint to the hardware to 
+allocate the cache block in a designated cache.
+_level_ is specified as follows:
 
-==== `PREFETCH.R`
+* `default` -- an _implementation-defined_ level, which may be a function of
+  physical addresses, dynamic allocation policies, or any other characteristic
+* `L1` -- the first cache logically accessed by a hart on the path to memory
+* `L2` -- the second cache logically accessed by a hart on the path to memory
+* `L3` -- the third cache logically accessed by a hart on the path to memory
 
-==== `PREFETCH.W`
+An implementation may ignore _level_ and assume _level_ is `default` for all 
+cache block hint instructions.
 
-==== `PREFETCH.I`
+****
+_To a certain degree, level is implementation-defined for all systems; however, 
+`L1`, `L2`, and `L3` are intended to communicate their common, informal 
+meaning._
+****
 
-==== `DEMOTE`
+==== FIXME: `PREFETCH.R`
+
+==== FIXME: `PREFETCH.W`
+
+==== FIXME: `PREFETCH.I`
+
+==== FIXME: `DEMOTE`
 
 === FIXME: Cache Block Discovery Instruction
 
-==== `CBO.SIZE`
+==== FIXME: `CBO.SIZE`
 
 
 == Opcode Map
