@@ -24,56 +24,91 @@ designs.
 
 === Goals
 
-* Introduce an architectural abstraction of caches and system topology
-* Define instructions that operate on the abstract cache and system topology
+* Define instructions that operate on an architectural abstraction of caches 
+  and system topology
 * Specify the interactions of CMOs with the RVWMO memory ordering model
 * Support various software use-cases such as software-managed cache coherence
   and non-coherent I/O
 * Allow execution of CMOs in lower privilege modes, including U-mode
 
+=== Non-Goals
+
+The following goals are intentionally deferred to a later specification:
+
+* Cache management operations on microarchitectural characteristics, e.g. 
+  set/way operations or whole cache operations
+* Specifying the behavior of cache management operations on different cache 
+  block sizes
+* Performance has _not_ been a primary goal for this version of the 
+  specification (though the specification is mindful not to hinder performance)
+
 == Overview
 
-=== Caches in RISC-V
+In general, a CMO instruction initiates an operation on a set of caches based 
+on instruction type, CSR state, physical memory attributes, and other 
+architectural state.
+A CMO instruction specifies an effective address, which may be translated by 
+various translation mechanisms into a physical address.
+A hart may then perform a subsequent memory access with that physical address 
+in order to operate on various caches throughout a system.
 
-Caches in RISC-V serve the same purpose as in other architectures: to reduce 
-average memory latency by buffering copies of data values close to a system 
-agent.
-A cached copy of data is known as a _cache block_, which is a naturally aligned 
-power-of-two (NAPOT) set of an _implementation-defined_ number of bytes, 
-corresponding to a similarly sized and aligned set of memory locations.
-A system may make multiple copies of a cache block, and these copies may be 
-transferred between various caches and memory.
+=== Memory and Caches in RISC-V
 
-*_FIXME:_* types of cache blocks?
+As specified in the RISC-V base and privileged architectures, memory is 
+organized as an array of bytes, with a given physical address identifying a 
+particular memory location.
+Each memory location is further associated with a main memory region, an I/O 
+device region, or a vacant region.
+In this extension, a _memory agent_ services memory accesses to a set of memory 
+locations that comprise a memory region (of any type), while a _system agent_ 
+performs memory accesses to memory locations and may be a hart or an I/O device 
+(or _device_ for short).
 
-A cache consists of a set of cache blocks, organized in an 
-_implementation-defined_ manner.
+****
+_A particular I/O device may be a memory agent, a system agent, or both._
+****
+
+Caches in RISC-V reduce average memory latency by buffering copies of data from 
+frequently accessed memory locations close to system agents.
+Specifically, a cache buffers copies of _cache blocks_, each of which consists 
+of a contiguous, non-overlapping, naturally aligned power-of-two (NAPOT) set of 
+bytes and corresponds to a similarly NAPOT set of memory locations and 
+associated physical addresses.
+A system may make multiple copies of a given cache block, and these copies may 
+be transferred to and from various caches and memory.
+The underlying memory locations for a cache block form the _backing storage_ 
+for the block, and the organization of a cache and the size of a cache block 
+are _implementation-defined_.
+
 RISC-V defines three types of caches: A _private cache_ is accessed by a single 
-hart or device, while a _shared cache_ is accessed by a set of harts and 
-devices.
-In addition, a _memory cache_ is localized to a main memory region or an I/O 
-device region and is effectively "invisible" to the system agents that access 
-memory.
+system agent, while a _shared cache_ is accessed by more than one system agent.
+In addition, a _memory cache_ is localized to memory agent and is effectively 
+"invisible" to the system agents that access a given memory location.
+(In other words, a memory cache may serve as a proxy for the actual physical 
+memory location.)
 The base set of cache management operations operates on private and shared 
 caches only and is _not_ guaranteed to operate on memory caches.
 
+*_FIXME:_* types of cache blocks?
+
 ==== Cache Block States
 
-A cache block may be in one of three states:
+Relative to a given cache, a cache block may be in one of three states:
 
-* Invalid - the cache block is not present in the cache
-* Unmodified - the cache block is present in the cache and has _not_ been 
-  written by any system agent since the copy was transferred to the cache
-* Modified - the cache block is present in the cache and has been written by at 
-  least one system agent since the initial copy was read from memory and was 
-  transferred to a cache
+* _Invalid_ -- the cache block is _not_ present in the cache
+* _Unmodified_ -- the cache block is present in the cache and _this_ copy has 
+  _not_ been written by a system agent
+* _Modified_ -- the cache block is present in the cache and _this_ copy has been 
+  written by a system agent
 
-All caches must differentiate between invalid and unmodified cache blocks, but 
-a cache may or may not additionally track modified cache blocks depending on 
+All caches differentiate between invalid and unmodified cache blocks, and a
+cache may or may not track modified cache blocks depending on 
 _implementation-defined_ write policies, e.g. write-back or write-through,
 respectively.
-A cache, therefore, may implement all three states (invalid, unmodified, and 
-modified) or only two (invalid and unmodified).
+A cache, therefore, may implement only two states (invalid and unmodified) or 
+all three states (invalid, unmodified, and modified).
+Additionally, a cache block in either the unmodified or modified state is 
+considered to be _valid_.
 
 In addition, based on _implementation-defined_ system-wide cache policies and 
 mechanisms, an unmodified cache block may _not_ be consistent with memory, and 
@@ -81,8 +116,8 @@ a modified copy may be present in another cache at the same time.
 Furthermore, the state of the cache block may also be communicated when the 
 block is transferred to or from the cache.
 These policies and mechanisms are typically defined by a cache coherence 
-protocol (see <<_cache_coherence,below>>) and are beyond the scope of this 
-specification.
+protocol (see the <<_system_organization>> section) and are beyond the scope of 
+this specification.
 
 A transition from invalid to valid occurs when a cache allocates a cache block, 
 resulting in a transfer of the block to the cache from another cache or memory 
@@ -118,6 +153,8 @@ memory.
 In such a cache, the data write _must_ update the data values of the cache 
 block, or the cache block _must_ transition to invalid.
 
+==== CMO Effects on Caches
+
 CMO instructions may also affect the state of a cache block.
 A cache block management instruction performs one of the following operations, 
 which may change the state of a cache block and may result in a transfer of 
@@ -144,69 +181,112 @@ data write operations, similar to a series of store byte instructions.
 An implementation may or may not update the entire cache block atomically.
 
 Finally, a cache block hint instruction may perform an _implementation-defined_ 
-operation or no operation, which does not affect the state of the cache.
+operation or no operation, the latter of which does not affect the state of the 
+cache.
 
-==== Cache Coherence
+=== System Organization
 
-Caches introduce multiple cache blocks in a system, and _cache coherence_ 
-refers to the mechanism that ensures that cached copies remain coherent with 
-respect to each other.
-Cache coherence may be implemented in either hardware or software.
+Caches are logically situated between system agents and memory agents.
+A memory access from a given system agent to a given memory location may access 
+any number of caches on a _memory access path_ (or _path_ for short), which is 
+determined primarily by the following characteristics:
 
-When cache coherence is implemented in hardware, caches are grouped into sets
-known as _coherence domains_.
-A coherence domain may consist of any number of caches, including a single 
-cache, and the copies within a given domain are kept coherent with respect to 
-each other by hardware.
-If two caches are in different coherence domains, those caches and their cache 
-blocks are _non-coherent_ with respect to each other.
-Software may implement cache coherence on non-coherent cache blocks using CMO 
-instructions.
+* The physical address of the memory access
+* The memory attributes associated with the memory access
+
+The physical address identifies the memory location being accessed and is a 
+function of the effective address specified by a CMO instruction and any 
+enabled translation mechanisms.
+In addition, memory attributes may be specified by either architectural or 
+_implementation-defined_ mechanisms.
+Other factors, such as type of operation, may also influence the path.
 
 ****
-_Implementing cache coherence in software is one of the primary use-cases for 
-cache management operations._
+_In particular, paths for memory accesses with the same memory attributes from_
+_the same system agent to different memory locations may be different._
+_Additionally, paths for memory accesses with different memory attributes from_
+_the same agent to the same memory location may be different._
 ****
 
-A hardware cache coherence mechanism may add additional cache states and may 
-cause additional cache block state transitions.
-The effects of a hardware cache coherence mechanism on cache block state is 
-beyond the scope of this specification.
+Since caches introduce multiple copies of cache blocks, a system may implement 
+a _cache coherence_ mechanism in hardware to ensure that the copies in a set of 
+caches remain _coherent_ with respect to each other, i.e. the copies in the set 
+of caches appear to have the same data value, regardless of which cache is 
+accessed.
+The caches in such a set form a _coherence domain_ (or _domain_ for short), 
+which may consist of any number of caches, including an individual cache.
+The set of caches included in a given coherence domain is determined by the 
+same characteristics that determine the path.
 
-*_FIXME_*: Symmetrical vs. asymmetrical and supersets of sets
+If two caches are in different coherence domains, the copies in those caches 
+are _non-coherent_ with respect to each other.
+Non-coherent copies may appear to have different data values, or the copies may 
+appear to have the same data values.
+Software may enforce coherence on non-coherent copies using CMO instructions.
 
-==== Memory
+****
+_A hardware cache coherence mechanism may add additional cache states and may_
+_cause additional cache block state transitions._
+_The effects of a hardware cache coherence mechanism on cache block state are_
+_beyond the scope of this specification._
 
-Consistent with the base and privileged RISC-V architecture, every physical 
-address corresponds to a location in memory, either in a main memory region, an 
-I/O device region, or a vacant region.
-The memory locations corresponding to a cache block are known as the _backing 
-storage_ for that block.
-In addition, a memory cache may serve as a proxy for the actual memory 
-locations.
+_The term_ coherent _implies a guarantee of coherence, while the term_
+non-coherent _implies only the lack of such a guarantee, not a guarantee of_
+_non-coherence._
+****
 
-==== System Agents
+Conceptually, domains along a path are accessed in a serial manner, while the 
+caches within a domain are accessed in an _implementation-defined_ manner based 
+on the cache coherence protocol.
+Caches may be accessed _directly_, as a result of a memory access travelling along 
+a path, or _indirectly_, as a result of the cache coherence protocol
 
-_System agents_ perform memory accesses.
-A system agent may be a hart or an I/O device (shortened to _device_ in this 
-specification).
 
-==== System Topology
 
-A memory access follows a _path_ from a system agent to a memory location, and 
-on that path, a memory access may access one or more private or shared caches.
-A path is determined by the following:
+Caches are organized in a hierarchically between system agents and memory 
+agents.
 
-* The type of operation
-* The physical address of the operation
-* The system agent performing the operation
-* The memory attributes associated with the operation
+Physical vs. logical hierarchy
+
+Paths converge physically at a cache, logically  at a domain.
+
+A memory access traverses the hierarchy along a path
+
+A memory access accesses a series of caches
+
+
+
+
+
+
+
+
+==== FooBar
+
+
+Caches along a path are accessed _directly_. If a hardware cache coherence 
+mechanism is implemented, additional caches within a coherence domain may be 
+accessed _indirectly_ depending on the state of those caches.
+
+If two separate memory accesses to the same physical address access the same 
+set of caches, either directly or indirectly, those accesses are _symmetric_ 
+with respect to each other. Otherwise, if those memory accesses access 
+different sets of caches, they are _asymmetric_ with respect to each other.
+
+
+
+symmetric at the PoC if two paths accesse the same set of caches directly and indirectly
+asymmetric if not
+
 
 Paths converge at a _point of convergence_, or _PoC_, which designates the 
-point at which a set of memory accesses is logically ordered.
+point at which a set of memory accesses to the same memory location is 
+logically ordered.
 Once ordered by a PoC, a memory access in the set cannot be reordered with 
 respect to other memory accesses in the set, and the set of memory accesses 
 shares the remainder of the path to the memory location.
+
+PoC establishes a coherence order.
 
 ****
 _A PoC may be represented, for example, by a single physical entity, such as an 
@@ -222,8 +302,8 @@ that the set of memory accesses ordered by PoC changes._
 
 This extension defines several PoCs. The fundamental PoC for a given physical 
 address is the _point of convergence for memory_, or _PoC-memory_, which is the 
-PoC where all paths for that physical address converge, independent of 
-operation, system agent, or memory attributes.
+PoC where all paths for that physical address converge, independent of all 
+other characteristics that define a path.
 
 ****
 _The PoC-memory conceptually represents the point at which memory accesses from 
@@ -250,15 +330,75 @@ Each domain has a corresponding PoC
 
 *_FIXME:_* Other PoCs?
 
+*_FIXME:_* Direct access -- a memory access from a hart accesses a cache on the 
+path to memory; indirect access -- a memory access from a hart accesses a cache 
+via a coherence mechanism, e.g. a probe, in a coherence domain.
+
+
+==== FIXME: PMA Behaviors
+
+FIXME: Coherence and cacheability attribute...
+
+Ignore cacheability to enable changes in attribute
+
+Non-coherence is not a guarantee
+
 === FIXME: Memory Ordering
 
-=== FIXME: PMA Behaviors
+==== Preserved Program Order
 
-FIXME: Coherence attribute...
+The preserved program order (abbreviated _PPO_ below) rules are defined by the 
+RVWMO memory ordering 
+model. How the operations resulting from CMO instructions fit into these rules 
+is described below.
+
+For cache block management instructions, the resulting invalidate, clean, and 
+flush operations behave as stores in the PPO rules subject to one additional 
+overlapping address rule. Specifically, if _a_ precedes _b_ in program order, 
+then _a_ will precede _b_ in the global memory order if:
+
+* _a_ is an invalidate, clean, or flush, _b_ is a load, and _a_ and _b_ access 
+  overlapping memory addresses
+
+****
+_The above rule ensures that a subsequent load operation in program order never 
+appears in the global memory order before a preceding invalidate, clean, or 
+flush operation to an overlapping address._
+****
+
+For cache block write instructions, the resulting write operations simply 
+behave as stores in RVWMO.
+
+As cache block hint instructions do not modify architectural memory state, the 
+resulting operations are _not_ ordered in RVWMO.
+
+
+==== Load Values
+
+What does global memory order mean for software managed coherence:
+
+* Can describe global to mean "global" for all agents and domains
+* Can describe global to mean "global" for some agents and domains
+
+In addition, an invalidate operation changes the set of values that may be 
+returned by a load. In particular, a third condition is added to the Load Value 
+Axiom:
+
+[start=3]
+. If an invalidate precedes _i_ in program order and operates on a byte, and no 
+store to that byte appears in program order or in the global memory order 
+between the invalidate and _i_, the load value is UNSPECIFIED (imp-def?)
+
+
+==== Ordering Events
+
+
 
 === FIXME: Discovery
 
 FIXME: HW vs. SW
+
+For now, fixed size across all harts and devices that share a domain
 
 === Traps
 
@@ -266,7 +406,7 @@ FIXME: HW vs. SW
 
 Cache block management instructions and cache block write instructions may take 
 an illegal instruction exception depending on the _current privilege mode_ and 
-the state of the CMO control registers described <<_csrs,below>>.
+the state of the CMO control registers described in the <<_csrs>> section.
 The current privilege mode refers to the privilege mode of the hart at the time 
 the instruction is executed.
 
@@ -289,8 +429,8 @@ access (`U=1`) in the effective privilege mode.
 If these conditions are _not_ met, the instruction takes a store/AMO page fault 
 exception.
 In addition, `CBO.INVAL` instructions may take a store/AMO page fault exception 
-depending on the state of the CMO control registers described <<_csrs,below>> 
-and whether the access has been granted write permission by the PTE.
+depending on the state of the CMO control registers described in the <<_csrs>> 
+section and whether the access has been granted write permission by the PTE.
 
 Cache block write instructions require a valid translation (`V=1`) and write 
 (`W=1`) permission and, if applicable, user access (`U=1`) in the effective 
@@ -361,8 +501,8 @@ permission for _all_ accessed physical addresses.
 If this condition is _not_ met, the instruction takes a store/AMO access fault 
 exception.
 In addition, `CBO.INVAL` instructions may take a store/AMO access fault 
-exception depending on the state of the CMO control registers described 
-<<_csrs,below>> and whether the access has been granted partial joint write 
+exception depending on the state of the CMO control registers described in the 
+<<_csrs>> section and whether the access has been granted partial joint write 
 permission by the PMP and PMAs.
 
 Cache block write instructions require full joint write permission.
