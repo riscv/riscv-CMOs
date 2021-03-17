@@ -238,41 +238,45 @@ _non-coherence._
 Conceptually, domains along a path are accessed in a serial manner, while the 
 caches within a domain are accessed in an _implementation-defined_ manner based 
 on the cache coherence protocol.
-Caches may be accessed _directly_, as a result of a memory access travelling along 
-a path, or _indirectly_, as a result of the cache coherence protocol
+A memory access may access a cache _directly_, as a result of traversing the 
+path to memory, or _indirectly_, as a result of branching off the path due to 
+the cache coherence protocol.
+The set of caches accessed indirectly within a coherence domain is a function 
+of the states of the caches in the domain and the memory attributes associated 
+with the memory access.
+
+Paths from different system agents to the same memory location may converge 
+within a domain, at which point the paths are the same from that domain to the 
+memory location.
+When paths converge within a domain, the memory accesses on those paths are 
+ordered by the domain and remain ordered with respect to each other until the 
+memory location is accessed.
+Once an order has been established, those memory accesses are considered to be 
+_domain ordered_ and cannot be reordered within the system.
+
+****
+_This ordering definition is necessary to implement cache coherence protocols_
+_and forms the basis for the memory ordering model below._
+****
 
 
 
-Caches are organized in a hierarchically between system agents and memory 
-agents.
+Cache block management instruction specify hierarchy in terms of domains
 
-Physical vs. logical hierarchy
-
-Paths converge physically at a cache, logically  at a domain.
-
-A memory access traverses the hierarchy along a path
-
-A memory access accesses a series of caches
-
-
-
-
-
-
+Cache block write/hint instructions specify hierarchy in terms of structure
 
 
 ==== FooBar
 
+Domains define the sets of agents that communicate coherently without
 
-Caches along a path are accessed _directly_. If a hardware cache coherence 
-mechanism is implemented, additional caches within a coherence domain may be 
-accessed _indirectly_ depending on the state of those caches.
 
 If two separate memory accesses to the same physical address access the same 
 set of caches, either directly or indirectly, those accesses are _symmetric_ 
 with respect to each other. Otherwise, if those memory accesses access 
 different sets of caches, they are _asymmetric_ with respect to each other.
 
+Really, same domains -> symmetric; different domains -> asymmetric
 
 
 symmetric at the PoC if two paths accesse the same set of caches directly and indirectly
@@ -334,6 +338,8 @@ Each domain has a corresponding PoC
 path to memory; indirect access -- a memory access from a hart accesses a cache 
 via a coherence mechanism, e.g. a probe, in a coherence domain.
 
+*_FIXME:_* Domains can be mapped outward; within the frontier, outside the frontier
+
 
 ==== FIXME: PMA Behaviors
 
@@ -348,8 +354,8 @@ Non-coherence is not a guarantee
 ==== Preserved Program Order
 
 The preserved program order (abbreviated _PPO_ below) rules are defined by the 
-RVWMO memory ordering 
-model. How the operations resulting from CMO instructions fit into these rules 
+RVWMO memory ordering model.
+How the operations resulting from CMO instructions fit into these rules 
 is described below.
 
 For cache block management instructions, the resulting invalidate, clean, and 
@@ -367,10 +373,10 @@ flush operation to an overlapping address._
 ****
 
 For cache block write instructions, the resulting write operations simply 
-behave as stores in RVWMO.
+behave as stores in the PPO rules.
 
 As cache block hint instructions do not modify architectural memory state, the 
-resulting operations are _not_ ordered in RVWMO.
+resulting operations are _not_ ordered by the PPO rules.
 
 
 ==== Load Values
@@ -890,13 +896,55 @@ _To a certain degree, level is implementation-defined for all systems; however,
 meaning._
 ****
 
-==== FIXME: `PREFETCH.R`
+==== `PREFETCH.R`
 
-==== FIXME: `PREFETCH.W`
+A `PREFETCH.R` instruction indicates to the cache at the specified _level_ that 
+a subsequent read operation is likely to be performed on the cache block at the
+specified effective address in the near future.
 
-==== FIXME: `PREFETCH.I`
+An implementation typically allocates the cache block in the cache at the 
+specified _level_ in a state that allows read access; however, the instruction 
+is _not_ guaranteed to allocate the cache block in that cache.
 
-==== FIXME: `DEMOTE`
+==== `PREFETCH.W`
+
+A `PREFETCH.W` instruction indicates to the cache at the specified _level_ that 
+a subsequent write operation is likely to be performed on the cache block at 
+the specified effective address in the near future.
+
+An implementation typically allocates the cache block in the cache at the 
+specified _level_ in a state that allows write access; however, the instruction 
+is _not_ guaranteed to allocate the cache block in that cache.
+
+A PREFETCH.W instruction may interfere with the eventual success guarantee of 
+store-conditional instructions.
+
+==== `PREFETCH.I`
+
+A `PREFETCH.I` instruction indicates to the cache at the specified _level_ that 
+a subsequent instruction fetch operation is likely to be performed on the 
+cache block at the specified effective address in the near future.
+
+An implementation typically allocates the cache block in the cache at the 
+specified _level_ in a state that allows instruction fetch access; however, the 
+instruction is _not_ guaranteed to allocate the cache block in that cache.
+
+Instruction fetch operations may access caches different from those accessed by 
+read and write operations.
+It is _implementation-defined_ whether the cache at the specified _level_ in a 
+`PREFETCH.I` instruction is the same cache at the specified _level_ in a 
+`PREFETCH.R` or `PREFETCH.W` instruction.
+
+==== `DEMOTE`
+
+A `DEMOTE` instruction indicates to the cache at the specified _level_ that the 
+cache block at the specified effective address is no longer required to be 
+cached.
+
+****
+_Typically, a `DEMOTE` instruction operates on the replacement algorithm_
+_information for a cache block rather than the cache block itself._
+****
 
 === FIXME: Cache Block Discovery Instruction
 
@@ -914,13 +962,6 @@ meaning._
 
 ----
 
-=== FIXME: Memory Ordering
-
-From a memory ordering perspective, a memory access resulting from a cache operation instruction is considered to be a load operation or a store operation in the RVWMO memory ordering model depending on the instruction:
-
-* Cache block management instructions are generally considered to be store operations; however, like AMOs, the store operations generated by these instructions must be ordered with respect to subsequent loads to overlapping addresses in program order
-* Cache block write instructions are considered to be store operations
-* Cache block hint instructions are considered to be load operations
 
 Cache management operations are ordered with respect to other load operations, store operations, and cache management operations as specified by RVWMO, subject to any additional constraints defined above.
 In particular, overlapping address orderings are preserved (with the additional constraints defined above), while a `FENCE` instruction may be used to order cache management operations with respect to operations to non-overlapping addresses.
@@ -936,24 +977,6 @@ _In future extensions, an additional fence instruction may be required to determ
 
 
 
-* 000x - trap W1; trap W0; flush disable
-* 00x0 - trap W1; trap W0; flush disable
-* 0011 - trap W1; trap W0; inval disable
-
-* 0100 - trap W1; flush W0; flush disable
-* 0101 - trap W1; inval W0; flush disable
-* 0110 - trap W1; flush W0; flush disable
-* 0111 - trap W1; inval W0; inval disable
-
-* 1000 - flush W1; trap W0; flush disable
-* 1001 - flush W1; trap W0; flush disable
-* 1010 - inval W1; trap W0; flush disable
-* 1011 - inval W1; trap W0; inval disable
-
-* 1100 - flush W1; flush W0; flush disable
-* 1101 - flush W1; inval W0; flush disable
-* 1110 - inval W1; flush W0; flush disable
-* 1111 - inval W1; inval W0; inval disable
 
 
 
