@@ -1,4 +1,4 @@
-= Zicmobase Extension, Version 0.1
+= Zicmobase Extension, Version 0.1.1
 :sectnums:
 :toc:
 
@@ -224,7 +224,7 @@ _access ordered_ and cannot be reordered within the system.
 _This ordering definition is necessary to implement cache coherence protocols_
 _and forms the basis for the memory ordering model below._
 _Effectively, a PoC establishes a coherence order for a given memory location_
-_with respect to a set of agents._
+_with respect to a given set of agents._
 ****
 
 For every memory location in a system, the _point of convergence of memory_, or 
@@ -245,41 +245,45 @@ custom PoC.
 
 ****
 _The above definition allows an implementation to perform all operations to_
-_custom PoCs before the PoC-memory as if such operations were to the_
+_custom PoCs before the PoC-memory as if such operations were performed to the_
 _PoC-memory._
 ****
 
-A CMO instruction operates on the caches accessed while traversing a given 
-path, and any number of caches may be accessed along a path up to the specified 
-PoC.
-On a path, private caches are accessed between a system agent and the first 
-PoC, while shared caches are accessed between PoCs.
-Memory accesses from CMO instructions access the caches on a path _directly_.
+While traversing a given path, a memory access from a CMO instruction operates
+on the caches up to the specified PoC.
+Between a system agent and the first PoC on the path, the memory access
+operates on private caches, and between subsequent PoCs, the memory access
+operates on shared caches.
+There is no requirement, however, for any caches to be present either between a
+system agent and the first PoC or between subsequent PoCs.
+Caches on the path are accessed _directly_ by the memory access.
+Additional caches on the paths that converge at a given PoC may be accessed
+_indirectly_ depending on the memory attributes associated with a memory access
+and any _implementation-defined_ cache coherence mechanisms.
 
-Caches introduce multiple copies of cache blocks, and a system may implement a 
-_cache coherence_ mechanism in hardware to ensure that the copies in a set of 
-caches remain _coherent_ with respect to each other, i.e. the copies in the set 
-of caches appear to have the same data values, regardless of which cache in the 
-set is accessed.
-Such a set corresponds to a _coherence domain_ (or _domain_ for short), which 
-may consist of any number of caches, including an individual cache, and a given 
-coherence domain is defined by the same characteristics that determine the 
-path, specifically the physical address and memory attributes of a memory 
-access.
-Additionally, depending on the cache coherence mechanism, memory accesses from 
-CMO instructions _indirectly_ access the caches within a coherence domain that 
-are _not_ accessed directly.
+Systems may implement hardware cache coherence mechanisms to ensure that the 
+copies in a set of caches remain _coherent_ with respect to each other, i.e. 
+the copies in the set of caches appear to have the same data values, regardless 
+of which cache in the set is accessed.
+The set of caches on which hardware can maintain this property corresponds to a 
+_hardware coherence domain_ (or _domain_ for short), which may consist of any 
+number of caches, including an individual cache.
+Only a subset of the caches in a domain may be accessed depending on the memory 
+attributes of a memory access and the cache coherence protocol.
 
 ****
-_A hardware cache coherence mechanism may add additional cache states and may_
+_A hardware cache coherence protocol may add additional cache states and may_
 _cause additional cache block state transitions._
-_The effects of a hardware cache coherence mechanism on cache block state are_
+_The effects of a hardware cache coherence protocol on cache block states are_
 _beyond the scope of this specification._
 ****
 
-If two caches are in different coherence domains, the copies in those caches 
-are _non-coherent_ with respect to each other.
-Non-coherent copies may appear to have different data values, or the copies may 
+If two caches are in different domains, the copies in those caches are
+_non-coherent_ with respect to each other.
+In addition, two copies in different caches within the same domain are also
+non-coherent with respect to each other if the memory attributes of a memory
+access do not require both caches to be accessed.
+Non-coherent copies may appear to have different data values, or the copies may
 appear to have the same data values.
 Software may enforce coherence on non-coherent copies using CMO instructions.
 
@@ -289,48 +293,16 @@ non-coherent _implies only the lack of such a guarantee, not a guarantee of_
 _non-coherence._
 ****
 
-
-****
-Stuff being worked on:
-
-PoCs and coherence domains are related 
-
-
-
-In particular, the memory attributes of a memory access define the coherence 
-domain.
-
-
-
-The PoC in a coherence domain closest to the PoC-memory is special.
-
-A PoC is not required to correspond to a cache.
-
-If two separate memory accesses to the same physical address access the same 
-set of caches, either directly or indirectly, those accesses are _symmetric_ 
-with respect to each other. Otherwise, if those memory accesses access 
-different sets of caches, they are _asymmetric_ with respect to each other.
-
-Really, same domains -> symmetric; different domains -> asymmetric
-
-If two paths converge at the same PoC and the memory access
-
-
-
-paths, convergence, domains overlay
-
-SW view: POCs define sets of agents that communicate coherently without SW help
-
-Coherent up to a PoC?
-
-direct caches on path, indirect caches above PoC in coherence domain
-
-PoC closest to memory in domain
-
-****
-
-
-*_FIXME:_* Domains can be mapped outward; within the frontier, outside the frontier
+Domains correspond to particular PoCs.
+A _PoC-domain_ (working title) is defined to be the PoC at which all paths that
+pass through any cache in the domain before the PoC converge.
+Systems may have any number of PoCs-domain visible to software via memory 
+attributes or as custom PoCs.
+In addition, a domain may be asymmetric with respect to the paths that converge
+at a PoC-domain.
+Specifically, a memory access on one path may indirectly access the caches on a
+second path, while a memory access on the second path may _not_ indirectly
+access the caches on the first.
 
 ****
 _This extension does not prohibit system agents from bypassing the PoC-memory_
@@ -347,6 +319,49 @@ _caches, or various points of persistence may be defined to support different_
 _classes of storage._
 ****
 
+****
+Below are some properties/implications of the above definitions:
+
+* Paths form a tree with the system agents as leaves and the PoC-memory as the 
+  root; intermediate PoCs are nodes on the tree, while caches lie on the edges
+  ** For example, a private L1 and L2 cache lie on the edge between a system 
+    agent and the first PoC
+* PoCs establish a hierarchy
+  ** At each PoC, the set of agents whose memory accesses are ordered is the
+    union of the sets defined by the previous PoCs
+* Memory accesses on a path obey uniprocessor semantics
+* Caches on the path from a domain PoC to the next PoC are effectively part of
+  the domain
+* Caches between PoCs are effectively part of the same domain
+  ** The access order of caches between PoCs is implementation-defined (?)
+* PoCs and domains 
+* PoCs are accessed serially (?)
+****
+
+.Ignore Me
+****
+Random stuff being worked on:
+
+memory accesses due to loads and stores can be ordered anywhere in a domain, but the
+ultimate point of ordering for the domain is the PoC-domain.
+memory accesses due to CMOs operate to a PoC-domain and guarantee the whole domain
+has been operated on
+
+
+SW view: POCs define sets of agents that communicate coherently without SW help
+
+
+*_FIXME:_* Domains can be mapped outward; within the frontier, outside the frontier
+
+Is there such a thing as a PoC-hart that represents uniprocessor ordering?
+That makes the tree definition a bit more easy since a leaf becomes a PoC (but
+nothing is really converging, unless you consider loads and stores as separate 
+things converging)
+
+Structural definition: relative to system agent. L1 is the "first" cache accessed, etc.
+****
+
+
 ==== FIXME: PMA Behaviors
 
 FIXME: Coherence and cacheability attributes...
@@ -354,9 +369,6 @@ FIXME: Coherence and cacheability attributes...
 Ignore cacheability to enable changes in attribute
 
 Non-coherent implies that no caches are accessed indirectly.
-
-Non-coherence is not a guarantee
-
 
 
 === FIXME: Memory Ordering
@@ -391,11 +403,6 @@ resulting operations are _not_ ordered by the PPO rules.
 
 ==== Load Values
 
-What does global memory order mean for software managed coherence:
-
-* Can describe global to mean "global" for all agents and domains
-* Can describe global to mean "global" for some agents and domains
-
 In addition, an invalidate operation changes the set of values that may be 
 returned by a load. In particular, a third condition is added to the Load Value 
 Axiom:
@@ -403,12 +410,22 @@ Axiom:
 [start=3]
 . If an invalidate precedes _i_ in program order and operates on a byte, and no 
 store to that byte appears in program order or in the global memory order 
-between the invalidate and _i_, the load value is UNSPECIFIED (imp-def?)
+between the invalidate and _i_, the load value is _implementation-defined_
 
+****
+What does global memory order mean for software managed coherence:
+
+* Can describe global to mean "global" for all agents and domains (single universe)
+* Can describe global to mean "global" for some agents and domains (a multiverse)
+
+The above definition is written using a multiverse definition for global memory
+order. A single universe definition would constrain the result to orders that
+could be produced by other agents. Maybe...?
+****
 
 ==== Ordering Events
 
-Ordering event for CMO: access ordered at explicit PoC
+Ordering event for CMO: access ordered at explicit PoC(-domain)
 
 Ordering event for load: access ordered in the implicit domain
 
@@ -975,19 +992,10 @@ _information for a cache block rather than the cache block itself._
 
 '''
 
-
+.Ignore Me
 ****
 
 PoC Wording:
-
-Paths from different system agents to the same memory location may converge 
-within a domain, at which point the paths are the same from that domain to the 
-memory location.
-When paths converge within a domain, the memory accesses on those paths are 
-ordered by the domain and remain ordered with respect to each other until the 
-memory location is accessed.
-Once an order has been established, those memory accesses are considered to be 
-_domain ordered_ and cannot be reordered within the system.
 
 
 Paths converge at a _point of convergence_, or _PoC_, which designates the 
@@ -1004,56 +1012,11 @@ other characteristics that define a path.
 
 Memory Ordering Wording:
 
-Cache management operations are ordered with respect to other load operations, store operations, and cache management operations as specified by RVWMO, subject to any additional constraints defined above.
-In particular, overlapping address orderings are preserved (with the additional constraints defined above), while a `FENCE` instruction may be used to order cache management operations with respect to operations to non-overlapping addresses.
-The other RVWMO ordering rules apply as well.
-
-For a cache block management instruction, the _effects_ of the resulting operation are ordered with respect to any other required operations.
-In other words, such a cache operation is considered to be ordered once the operation is performed with respect to the required system agents.
-
-----
 _The existing `FENCE` instruction is sufficient to order the cache management operations in the base extension._
 _In future extensions, an additional fence instruction may be required to determine when certain cache management operations are complete._
-----
 
 
-
-
-
-
-
-* M-mode:
-  **  _N/A_ (CBO.INVAL never faults due to the CMO control registers)
-* S/HS-mode:
-  ** Access fault: +
-    `!(mcmocontrol.INVWxE)`
-* U-mode:
-  ** Access fault: +
-    `!(mcmocontrol.INVWxE)`
-  ** Page fault: +
-    `(mcmocontrol.INVWxE) &&` +
-    `!(scmocontrol.INVWxE || satp.MODE==Bare)`
-* VS-mode:
-  ** Access fault: +
-    `(!mcmocontrol.INVWxE)`
-  ** Guest-page fault: +
-    `(mcmocontrol.INVWxE) &&` +
-    `!(hcmocontrol.INVWxE || hgatp.MODE==Bare)`
-* VU-mode:
-  ** Access fault: +
-    `!(mcmocontrol.INVWxE)`
-  ** Guest-page fault: +
-    `(mcmocontrol.INVWxE) &&` +
-    `!(hcmocontrol.INVWxE || hgatp.MODE==Bare)`
-  ** Page fault: +
-    `(mcmocontrol.INVWxE) &&` +
-    `(hcmocontrol.INVWxE || hgatp.MODE==Bare) &&` +
-    `!(vscmocontrol.INVWxE || vsatp.MODE==Bare)`
-
-
-
-
-
+CSR stuff:
 
 | [9:8]   | `INVW0`  | CBO.INVAL access without write permission (`_Wx_=0`).
 

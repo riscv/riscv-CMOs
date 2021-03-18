@@ -1,7 +1,7 @@
   <html>
     <head>
       <meta charset="utf-8">
-      <title>Zicmobase Extension, Version 0.1Git Identity</title>
+      <title>Zicmobase Extension, Version 0.1.1</title>
       <style>
         #wrapper {width: 960px; margin: 0 auto;}
         /* Asciidoctor default stylesheet | MIT License | https://asciidoctor.org */
@@ -456,20 +456,21 @@ body.book #toc,body.book #preamble,body.book h1.sect0,body.book .sect1>h2{page-b
     <body>
       <div id="wrapper">
         <div class="article">
-          <h1 id="__asciidoctor-preview-0__">Zicmobase Extension, Version 0.1</h1>
+          <h1 id="__asciidoctor-preview-0__">Zicmobase Extension, Version 0.1.1</h1>
 <div id="toc" class="toc">
 <div id="toctitle">Table of Contents</div>
 <ul class="sectlevel1">
 <li><a href="#_introduction">1. Introduction</a>
 <ul class="sectlevel2">
 <li><a href="#_goals">1.1. Goals</a></li>
+<li><a href="#_non_goals">1.2. Non-Goals</a></li>
 </ul>
 </li>
 <li><a href="#_overview">2. Overview</a>
 <ul class="sectlevel2">
-<li><a href="#_caches_in_risc_v">2.1. Caches in RISC-V</a></li>
-<li><a href="#_fixme_memory_ordering">2.2. FIXME: Memory Ordering</a></li>
-<li><a href="#_fixme_pma_behaviors">2.3. FIXME: PMA Behaviors</a></li>
+<li><a href="#_memory_and_caches_in_risc_v">2.1. Memory and Caches in RISC-V</a></li>
+<li><a href="#_system_topology">2.2. System Topology</a></li>
+<li><a href="#_fixme_memory_ordering">2.3. FIXME: Memory Ordering</a></li>
 <li><a href="#_fixme_discovery">2.4. FIXME: Discovery</a></li>
 <li><a href="#_traps">2.5. Traps</a></li>
 </ul>
@@ -529,20 +530,40 @@ designs.</p>
 <div id="__asciidoctor-preview-8__" class="ulist">
 <ul>
 <li id="__asciidoctor-preview-9__">
-<p>Introduce an architectural abstraction of caches and system topology</p>
+<p>Define instructions that operate on an architectural abstraction of caches
+and system topology</p>
 </li>
 <li id="__asciidoctor-preview-10__">
-<p>Define instructions that operate on the abstract cache and system topology</p>
-</li>
-<li id="__asciidoctor-preview-11__">
 <p>Specify the interactions of CMOs with the RVWMO memory ordering model</p>
 </li>
-<li id="__asciidoctor-preview-12__">
+<li id="__asciidoctor-preview-11__">
 <p>Support various software use-cases such as software-managed cache coherence
 and non-coherent I/O</p>
 </li>
-<li id="__asciidoctor-preview-13__">
+<li id="__asciidoctor-preview-12__">
 <p>Allow execution of CMOs in lower privilege modes, including U-mode</p>
+</li>
+</ul>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_non_goals">1.2. Non-Goals</h3>
+<div id="__asciidoctor-preview-13__" class="paragraph">
+<p>The following goals are intentionally deferred to a later specification:</p>
+</div>
+<div id="__asciidoctor-preview-14__" class="ulist">
+<ul>
+<li id="__asciidoctor-preview-15__">
+<p>Cache management operations on microarchitectural characteristics, e.g.
+set/way operations or whole cache operations</p>
+</li>
+<li id="__asciidoctor-preview-16__">
+<p>Specifying the behavior of cache management operations on different cache
+block sizes</p>
+</li>
+<li id="__asciidoctor-preview-17__">
+<p>Performance has <em>not</em> been a primary goal for this version of the
+specification (though the specification is mindful not to hinder performance)</p>
 </li>
 </ul>
 </div>
@@ -552,73 +573,102 @@ and non-coherent I/O</p>
 <div class="sect1">
 <h2 id="_overview">2. Overview</h2>
 <div class="sectionbody">
+<div id="__asciidoctor-preview-18__" class="paragraph">
+<p>In general, a CMO instruction initiates an operation on a set of caches based
+on instruction type, CSR state, physical memory attributes, and other
+architectural state.
+A CMO instruction specifies an effective address, which may be translated by
+various translation mechanisms into a physical address.
+A hart may then perform a subsequent memory access with that physical address
+in order to operate on various caches throughout a system.</p>
+</div>
 <div class="sect2">
-<h3 id="_caches_in_risc_v">2.1. Caches in RISC-V</h3>
-<div id="__asciidoctor-preview-14__" class="paragraph">
-<p>Caches in RISC-V serve the same purpose as in other architectures: to reduce
-average memory latency by buffering copies of data values close to a system
-agent.
-A cached copy of data is known as a <em>cache block</em>, which is a naturally aligned
-power-of-two (NAPOT) set of an <em>implementation-defined</em> number of bytes,
-corresponding to a similarly sized and aligned set of memory locations.
-A system may make multiple copies of a cache block, and these copies may be
-transferred between various caches and memory.</p>
+<h3 id="_memory_and_caches_in_risc_v">2.1. Memory and Caches in RISC-V</h3>
+<div id="__asciidoctor-preview-19__" class="paragraph">
+<p>As specified in the RISC-V base and privileged architectures, memory is
+organized as an array of bytes, with a given physical address identifying a
+particular memory location.
+Each memory location is further associated with a main memory region, an I/O
+device region, or a vacant region.
+In this extension, a <em>memory agent</em> services memory accesses to a set of memory
+locations that comprise a memory region (of any type), while a <em>system agent</em>
+performs memory accesses to memory locations and may be a hart or an I/O device
+(or <em>device</em> for short).</p>
 </div>
-<div id="__asciidoctor-preview-15__" class="paragraph">
-<p><strong><em>FIXME:</em></strong> types of cache blocks?</p>
+<div id="__asciidoctor-preview-20__" class="sidebarblock">
+<div class="content">
+<div id="__asciidoctor-preview-21__" class="paragraph">
+<p><em>A particular I/O device may be a memory agent, a system agent, or both.</em></p>
 </div>
-<div id="__asciidoctor-preview-16__" class="paragraph">
-<p>A cache consists of a set of cache blocks, organized in an
-<em>implementation-defined</em> manner.
-RISC-V defines three types of caches: A <em>private cache</em> is accessed by a single
-hart or device, while a <em>shared cache</em> is accessed by a set of harts and
-devices.
-In addition, a <em>memory cache</em> is localized to a main memory region or an I/O
-device region and is effectively "invisible" to the system agents that access
-memory.
+</div>
+</div>
+<div id="__asciidoctor-preview-22__" class="paragraph">
+<p>Caches in RISC-V reduce average memory latency by buffering copies of data from
+frequently accessed memory locations close to system agents.
+Specifically, a cache buffers copies of <em>cache blocks</em>, each of which consists
+of a contiguous, non-overlapping, naturally aligned power-of-two (NAPOT) set of
+bytes and corresponds to a similarly NAPOT set of memory locations and
+associated physical addresses.
+A system may make multiple copies of a given cache block, and these copies may
+be transferred to and from various caches and memory.
+The underlying memory locations for a cache block form the <em>backing storage</em>
+for the block, and the organization of a cache and the size of a cache block
+are <em>implementation-defined</em>.</p>
+</div>
+<div id="__asciidoctor-preview-23__" class="paragraph">
+<p>RISC-V defines three types of caches: A <em>private cache</em> is accessed by a single
+system agent, while a <em>shared cache</em> is accessed by more than one system agent.
+In addition, a <em>memory cache</em> is localized to memory agent and is effectively
+"invisible" to the system agents that access a given memory location.
+(In other words, a memory cache may serve as a proxy for the actual physical
+memory location.)
 The base set of cache management operations operates on private and shared
 caches only and is <em>not</em> guaranteed to operate on memory caches.</p>
 </div>
+<div id="__asciidoctor-preview-24__" class="paragraph">
+<p><strong><em>FIXME:</em></strong> types of cache blocks?</p>
+</div>
 <div class="sect3">
 <h4 id="_cache_block_states">2.1.1. Cache Block States</h4>
-<div id="__asciidoctor-preview-17__" class="paragraph">
-<p>A cache block may be in one of three states:</p>
+<div id="__asciidoctor-preview-25__" class="paragraph">
+<p>Relative to a given cache, a cache block may be in one of three states:</p>
 </div>
-<div id="__asciidoctor-preview-18__" class="ulist">
+<div id="__asciidoctor-preview-26__" class="ulist">
 <ul>
-<li id="__asciidoctor-preview-19__">
-<p>Invalid - the cache block is not present in the cache</p>
+<li id="__asciidoctor-preview-27__">
+<p><em>Invalid</em>&#8201;&#8212;&#8201;the cache block is <em>not</em> present in the cache</p>
 </li>
-<li id="__asciidoctor-preview-20__">
-<p>Unmodified - the cache block is present in the cache and has <em>not</em> been
-written by any system agent since the copy was transferred to the cache</p>
+<li id="__asciidoctor-preview-28__">
+<p><em>Unmodified</em>&#8201;&#8212;&#8201;the cache block is present in the cache and <em>this</em> copy has
+<em>not</em> been written by a system agent</p>
 </li>
-<li id="__asciidoctor-preview-21__">
-<p>Modified - the cache block is present in the cache and has been written by at
-least one system agent since the initial copy was read from memory and was
-transferred to a cache</p>
+<li id="__asciidoctor-preview-29__">
+<p><em>Modified</em>&#8201;&#8212;&#8201;the cache block is present in the cache and <em>this</em> copy has been
+written by a system agent</p>
 </li>
 </ul>
 </div>
-<div id="__asciidoctor-preview-22__" class="paragraph">
-<p>All caches must differentiate between invalid and unmodified cache blocks, but
-a cache may or may not additionally track modified cache blocks depending on
+<div id="__asciidoctor-preview-30__" class="paragraph">
+<p>All caches differentiate between invalid and unmodified cache blocks, and a
+cache may or may not track modified cache blocks depending on
 <em>implementation-defined</em> write policies, e.g. write-back or write-through,
 respectively.
-A cache, therefore, may implement all three states (invalid, unmodified, and
-modified) or only two (invalid and unmodified).</p>
+A cache, therefore, may implement only two states (invalid and unmodified) or
+all three states (invalid, unmodified, and modified).
+Additionally, a cache block in either the unmodified or modified state is
+considered to be <em>valid</em>.</p>
 </div>
-<div id="__asciidoctor-preview-23__" class="paragraph">
+<div id="__asciidoctor-preview-31__" class="paragraph">
 <p>In addition, based on <em>implementation-defined</em> system-wide cache policies and
 mechanisms, an unmodified cache block may <em>not</em> be consistent with memory, and
 a modified copy may be present in another cache at the same time.
 Furthermore, the state of the cache block may also be communicated when the
 block is transferred to or from the cache.
 These policies and mechanisms are typically defined by a cache coherence
-protocol (see <a href="#_cache_coherence">below</a>) and are beyond the scope of this
-specification.</p>
+protocol (see the <a href="#_system_topology">System Topology</a> section) and are beyond the scope of
+this specification.</p>
 </div>
-<div id="__asciidoctor-preview-24__" class="paragraph">
+<div id="__asciidoctor-preview-32__" class="paragraph">
 <p>A transition from invalid to valid occurs when a cache allocates a cache block,
 resulting in a transfer of the block to the cache from another cache or memory
 (performing a <em>memory read</em> in the latter case).
@@ -628,7 +678,7 @@ The cache block is allocated in either the unmodified or modified state
 depending on whether the cache tracks modified cache blocks and whether an
 unmodified or modified cache block is transferred to the cache.</p>
 </div>
-<div id="__asciidoctor-preview-25__" class="paragraph">
+<div id="__asciidoctor-preview-33__" class="paragraph">
 <p>A transition from valid to invalid occurs when a cache deallocates the cache
 block, potentially resulting in a transfer of the block from the cache to
 another cache or memory (performing a <em>memory write</em> in the latter case).
@@ -641,7 +691,7 @@ unmodified cache block to memory.)
 If the cache block is modified, the cache <em>must</em> transfer the modified block to
 another cache or memory.</p>
 </div>
-<div id="__asciidoctor-preview-26__" class="paragraph">
+<div id="__asciidoctor-preview-34__" class="paragraph">
 <p>Finally, if the cache tracks modified cache blocks, a transition from
 unmodified to modified occurs whenever a system agent executes an instruction,
 e.g. a store instruction, or performs an operation, e.g. a page table entry
@@ -655,21 +705,24 @@ memory.
 In such a cache, the data write <em>must</em> update the data values of the cache
 block, or the cache block <em>must</em> transition to invalid.</p>
 </div>
-<div id="__asciidoctor-preview-27__" class="paragraph">
+</div>
+<div class="sect3">
+<h4 id="_cmo_effects_on_caches">2.1.2. CMO Effects on Caches</h4>
+<div id="__asciidoctor-preview-35__" class="paragraph">
 <p>CMO instructions may also affect the state of a cache block.
 A cache block management instruction performs one of the following operations,
 which may change the state of a cache block and may result in a transfer of
 data from the cache:</p>
 </div>
-<div id="__asciidoctor-preview-28__" class="ulist">
+<div id="__asciidoctor-preview-36__" class="ulist">
 <ul>
-<li id="__asciidoctor-preview-29__">
+<li id="__asciidoctor-preview-37__">
 <p>An <em>invalidate</em> operation <em>must</em> change the state of a valid cache block
 to invalid; otherwise, no state change occurs.
 The operation may transfer the cache block if its state was valid before the
 operation; however, the transfer of the cache block is <em>not</em> required.</p>
 </li>
-<li id="__asciidoctor-preview-30__">
+<li id="__asciidoctor-preview-38__">
 <p>A <em>clean</em> operation <em>must</em> change the state of a modified cache block to
 unmodified, although the operation may change the state of a valid cache
 block to invalid; otherwise, no state change occurs.
@@ -677,7 +730,7 @@ The operation <em>must</em> transfer the cache block if its state was modified
 before the operation and may transfer the cache block if its state was
 unmodified before the operation.</p>
 </li>
-<li id="__asciidoctor-preview-31__">
+<li id="__asciidoctor-preview-39__">
 <p>A <em>flush</em> operation <em>must</em> change the state of a valid cache block to
 invalid; otherwise, no state change occurs.
 The operation <em>must</em> transfer the cache block if its state was modified
@@ -686,200 +739,416 @@ unmodified before the operation.</p>
 </li>
 </ul>
 </div>
-<div id="__asciidoctor-preview-32__" class="paragraph">
+<div id="__asciidoctor-preview-40__" class="paragraph">
 <p>A cache block write instruction effectively performs a series of byte atomic
 data write operations, similar to a series of store byte instructions.
 An implementation may or may not update the entire cache block atomically.</p>
 </div>
-<div id="__asciidoctor-preview-33__" class="paragraph">
-<p>Finally, a cache block hint instruction may perform an <em>implementation-defined</em>
-operation or no operation, which does not affect the state of the cache.</p>
-</div>
-</div>
-<div class="sect3">
-<h4 id="_cache_coherence">2.1.2. Cache Coherence</h4>
-<div id="__asciidoctor-preview-34__" class="paragraph">
-<p>Caches introduce multiple cache blocks in a system, and <em>cache coherence</em>
-refers to the mechanism that ensures that cached copies remain coherent with
-respect to each other.
-Cache coherence may be implemented in either hardware or software.</p>
-</div>
-<div id="__asciidoctor-preview-35__" class="paragraph">
-<p>When cache coherence is implemented in hardware, caches are grouped into sets
-known as <em>coherence domains</em>.
-A coherence domain may consist of any number of caches, including a single
-cache, and the copies within a given domain are kept coherent with respect to
-each other by hardware.
-If two caches are in different coherence domains, those caches and their cache
-blocks are <em>non-coherent</em> with respect to each other.
-Software may implement cache coherence on non-coherent cache blocks using CMO
-instructions.</p>
-</div>
-<div id="__asciidoctor-preview-36__" class="sidebarblock">
-<div class="content">
-<div id="__asciidoctor-preview-37__" class="paragraph">
-<p><em>Implementing cache coherence in software is one of the primary use-cases for
-cache management operations.</em></p>
-</div>
-</div>
-</div>
-<div id="__asciidoctor-preview-38__" class="paragraph">
-<p>A hardware cache coherence mechanism may add additional cache states and may
-cause additional cache block state transitions.
-The effects of a hardware cache coherence mechanism on cache block state is
-beyond the scope of this specification.</p>
-</div>
-<div id="__asciidoctor-preview-39__" class="paragraph">
-<p><strong><em>FIXME</em></strong>: Symmetrical vs. asymmetrical and supersets of sets</p>
-</div>
-</div>
-<div class="sect3">
-<h4 id="_memory">2.1.3. Memory</h4>
-<div id="__asciidoctor-preview-40__" class="paragraph">
-<p>Consistent with the base and privileged RISC-V architecture, every physical
-address corresponds to a location in memory, either in a main memory region, an
-I/O device region, or a vacant region.
-The memory locations corresponding to a cache block are known as the <em>backing
-storage</em> for that block.
-In addition, a memory cache may serve as a proxy for the actual memory
-locations.</p>
-</div>
-</div>
-<div class="sect3">
-<h4 id="_system_agents">2.1.4. System Agents</h4>
 <div id="__asciidoctor-preview-41__" class="paragraph">
-<p><em>System agents</em> perform memory accesses.
-A system agent may be a hart or an I/O device (shortened to <em>device</em> in this
-specification).</p>
+<p>Finally, a cache block hint instruction may perform an <em>implementation-defined</em>
+operation or no operation, the latter of which does not affect the state of the
+cache.</p>
 </div>
 </div>
-<div class="sect3">
-<h4 id="_system_topology">2.1.5. System Topology</h4>
+</div>
+<div class="sect2">
+<h3 id="_system_topology">2.2. System Topology</h3>
 <div id="__asciidoctor-preview-42__" class="paragraph">
-<p>A memory access follows a <em>path</em> from a system agent to a memory location, and
-on that path, a memory access may access one or more private or shared caches.
-A path is determined by the following:</p>
+<p>A memory access from a CMO instruction proceeds along <em>memory access path</em> (or
+<em>path</em> for short) from a given system agent toward a given memory location.
+A path is determined primarily by the following characteristics:</p>
 </div>
 <div id="__asciidoctor-preview-43__" class="ulist">
 <ul>
 <li id="__asciidoctor-preview-44__">
-<p>The type of operation</p>
+<p>The physical address of the memory access</p>
 </li>
 <li id="__asciidoctor-preview-45__">
-<p>The physical address of the operation</p>
-</li>
-<li id="__asciidoctor-preview-46__">
-<p>The system agent performing the operation</p>
-</li>
-<li id="__asciidoctor-preview-47__">
-<p>The memory attributes associated with the operation</p>
+<p>The memory attributes associated with the memory access</p>
 </li>
 </ul>
 </div>
-<div id="__asciidoctor-preview-48__" class="paragraph">
-<p>Paths converge at a <em>point of convergence</em>, or <em>PoC</em>, which designates the
-point at which a set of memory accesses is logically ordered.
-Once ordered by a PoC, a memory access in the set cannot be reordered with
-respect to other memory accesses in the set, and the set of memory accesses
-shares the remainder of the path to the memory location.</p>
+<div id="__asciidoctor-preview-46__" class="paragraph">
+<p>The physical address identifies the memory location being accessed and is a
+function of the effective address specified by a CMO instruction and any
+enabled translation mechanisms.
+In addition, the memory attributes for a memory access may be specified by
+either architectural or <em>implementation-defined</em> mechanisms.
+Other factors, such as type of operation, may also influence the path.</p>
 </div>
-<div id="__asciidoctor-preview-49__" class="sidebarblock">
+<div id="__asciidoctor-preview-47__" class="sidebarblock">
 <div class="content">
+<div id="__asciidoctor-preview-48__" class="paragraph">
+<p><em>The memory attributes that typically affect a path are related to cacheability</em>
+<em>and coherence; however, other memory attributes may affect a path.</em></p>
+</div>
+<div id="__asciidoctor-preview-49__" class="paragraph">
+<p><em>From the same system agent, paths for memory accesses with the same memory</em>
+<em>attributes to different memory locations may be different.</em>
+<em>Likewise, paths for memory accesses with different memory attributes to the</em>
+<em>same memory location may be different.</em></p>
+</div>
+</div>
+</div>
 <div id="__asciidoctor-preview-50__" class="paragraph">
-<p><em>A PoC may be represented, for example, by a single physical entity, such as an
-arbiter, or a distributed logical process, such as a cache coherence protocol,
-as long as the order of memory accesses is preserved once established.</em></p>
-</div>
-</div>
+<p>Paths from different system agents to the same memory location converge at a
+<em>point of convergence</em> (or <em>PoC</em>), and from a given PoC, the paths that have
+converged do not diverge.
+In addition, the memory accesses on those paths are ordered, and remain
+ordered, with respect to each other from a PoC until the memory accesses can be
+completed.
+A PoC is <em>not</em> required to order memory accesses to different memory locations.
+Once an order has been established, those memory accesses are considered to be
+<em>access ordered</em> and cannot be reordered within the system.</p>
 </div>
 <div id="__asciidoctor-preview-51__" class="sidebarblock">
 <div class="content">
 <div id="__asciidoctor-preview-52__" class="paragraph">
-<p><em>The pertinent memory attributes are typically cacheability and coherence;
-however, other memory attributes may affect the system behavior in such a way
-that the set of memory accesses ordered by PoC changes.</em></p>
+<p><em>This ordering definition is necessary to implement cache coherence protocols</em>
+<em>and forms the basis for the memory ordering model below.</em>
+<em>Effectively, a PoC establishes a coherence order for a given memory location</em>
+<em>with respect to a given set of agents.</em></p>
 </div>
 </div>
 </div>
 <div id="__asciidoctor-preview-53__" class="paragraph">
-<p>This extension defines several PoCs. The fundamental PoC for a given physical
-address is the <em>point of convergence for memory</em>, or <em>PoC-memory</em>, which is the
-PoC where all paths for that physical address converge, independent of
-operation, system agent, or memory attributes.</p>
+<p>For every memory location in a system, the <em>point of convergence of memory</em>, or
+<em>PoC-memory</em>, is the PoC where all paths for a given memory location converge,
+independent of all other characteristics that define a path.
+At the PoC-memory, all accesses to a memory location have been access ordered,
+and the CMO instructions defined in this extension are guaranteed to operate on
+a path up to the PoC-memory.</p>
 </div>
-<div id="__asciidoctor-preview-54__" class="sidebarblock">
-<div class="content">
+<div id="__asciidoctor-preview-54__" class="paragraph">
+<p><strong><em>FIXME:</em></strong> Define other standard PoCs?</p>
+</div>
 <div id="__asciidoctor-preview-55__" class="paragraph">
-<p><em>The PoC-memory conceptually represents the point at which memory accesses from
-all system agents that can access a memory location via the same physical
-address are ordered.</em>
-<em>The architecture does not prohibit system agents from accessing a memory
-location without passing through the PoC-memory, nor does the architecture
-prohibit caches beyond the PoC-memory.</em>
-<em>However, in such a system, software cannot expect the architectural cache
-operations to have the desired effects with respect to those system agents or
-caches.</em></p>
-</div>
-</div>
+<p>A system may define additional custom PoCs before the PoC-memory, and when such
+a PoC is specified in a CMO instruction, the instruction <em>must</em> operate on a
+given path up to the custom PoC and may operate on the path up to the
+PoC-memory.
+A CMO instruction is <em>not</em> required, however, to operate on the path beyond a
+custom PoC.</p>
 </div>
 <div id="__asciidoctor-preview-56__" class="sidebarblock">
 <div class="content">
 <div id="__asciidoctor-preview-57__" class="paragraph">
-<p><em>Additional system topology beyond the PoC-memory may be specified in future
-extensions.</em>
-<em>For example, various points of persistence may be defined to support different
-classes of storage.</em></p>
+<p><em>The above definition allows an implementation to perform all operations to</em>
+<em>custom PoCs before the PoC-memory as if such operations were performed to the</em>
+<em>PoC-memory.</em></p>
 </div>
 </div>
 </div>
 <div id="__asciidoctor-preview-58__" class="paragraph">
-<p><strong><em>FIXME:</em></strong> Define the relationship between PoCs and domains</p>
+<p>While traversing a given path, a memory access from a CMO instruction operates
+on the caches up to the specified PoC.
+Between a system agent and the first PoC on the path, the memory access
+operates on private caches, and between subsequent PoCs, the memory access
+operates on shared caches.
+There is no requirement, however, for any caches to be present either between a
+system agent and the first PoC or between subsequent PoCs.
+Caches on the path are accessed <em>directly</em> by the memory access.
+Additional caches on the paths that converge at a given PoC may be accessed
+<em>indirectly</em> depending on the memory attributes associated with a memory access
+and any <em>implementation-defined</em> cache coherence mechanisms.</p>
 </div>
 <div id="__asciidoctor-preview-59__" class="paragraph">
-<p>Each domain has a corresponding PoC</p>
+<p>Systems may implement hardware cache coherence mechanisms to ensure that the
+copies in a set of caches remain <em>coherent</em> with respect to each other, i.e.
+the copies in the set of caches appear to have the same data values, regardless
+of which cache in the set is accessed.
+The set of caches on which hardware can maintain this property corresponds to a
+<em>hardware coherence domain</em> (or <em>domain</em> for short), which may consist of any
+number of caches, including an individual cache.
+Only a subset of the caches in a domain may be accessed depending on the memory
+attributes of a memory access and the cache coherence protocol.</p>
 </div>
-<div id="__asciidoctor-preview-60__" class="paragraph">
-<p><strong><em>FIXME:</em></strong> Other PoCs?</p>
-</div>
-</div>
-</div>
-<div class="sect2">
-<h3 id="_fixme_memory_ordering">2.2. FIXME: Memory Ordering</h3>
-
-</div>
-<div class="sect2">
-<h3 id="_fixme_pma_behaviors">2.3. FIXME: PMA Behaviors</h3>
+<div id="__asciidoctor-preview-60__" class="sidebarblock">
+<div class="content">
 <div id="__asciidoctor-preview-61__" class="paragraph">
-<p>FIXME: Coherence attribute&#8230;&#8203;</p>
+<p><em>A hardware cache coherence protocol may add additional cache states and may</em>
+<em>cause additional cache block state transitions.</em>
+<em>The effects of a hardware cache coherence protocol on cache block states are</em>
+<em>beyond the scope of this specification.</em></p>
+</div>
+</div>
+</div>
+<div id="__asciidoctor-preview-62__" class="paragraph">
+<p>If two caches are in different domains, the copies in those caches are
+<em>non-coherent</em> with respect to each other.
+In addition, two copies in different caches within the same domain are also
+non-coherent with respect to each other if the memory attributes of a memory
+access do not require both caches to be accessed.
+Non-coherent copies may appear to have different data values, or the copies may
+appear to have the same data values.
+Software may enforce coherence on non-coherent copies using CMO instructions.</p>
+</div>
+<div id="__asciidoctor-preview-63__" class="sidebarblock">
+<div class="content">
+<div id="__asciidoctor-preview-64__" class="paragraph">
+<p><em>The term</em> coherent <em>implies a guarantee of coherence, while the term</em>
+non-coherent <em>implies only the lack of such a guarantee, not a guarantee of</em>
+<em>non-coherence.</em></p>
+</div>
+</div>
+</div>
+<div id="__asciidoctor-preview-65__" class="paragraph">
+<p>Domains correspond to particular PoCs.
+A <em>PoC-domain</em> (working title) is defined to be the PoC at which all paths that
+pass through any cache in the domain before the PoC converge.
+Systems may have any number of PoCs-domain visible to software via memory
+attributes or as custom PoCs.
+In addition, a domain may be asymmetric with respect to the paths that converge
+at a PoC-domain.
+Specifically, a memory access on one path may indirectly access the caches on a
+second path, while a memory access on the second path may <em>not</em> indirectly
+access the caches on the first.</p>
+</div>
+<div id="__asciidoctor-preview-66__" class="sidebarblock">
+<div class="content">
+<div id="__asciidoctor-preview-67__" class="paragraph">
+<p><em>This extension does not prohibit system agents from bypassing the PoC-memory</em>
+<em>to access a memory location, nor does the extension prohibit memory caches</em>
+<em>beyond the PoC-memory.</em>
+<em>However, in such a system, software cannot expect the currently defined cache</em>
+<em>operations to have the desired effects with respect to those system agents or</em>
+<em>caches.</em></p>
+</div>
+<div id="__asciidoctor-preview-68__" class="paragraph">
+<p><em>Additional system topology beyond the PoC-memory may be specified in future</em>
+<em>extensions.</em>
+<em>For example, additional points of convergence may be defined to manage memory</em>
+<em>caches, or various points of persistence may be defined to support different</em>
+<em>classes of storage.</em></p>
+</div>
+</div>
+</div>
+<div id="__asciidoctor-preview-69__" class="sidebarblock">
+<div class="content">
+<div id="__asciidoctor-preview-70__" class="paragraph">
+<p>Below are some properties/implications of the above definitions:</p>
+</div>
+<div id="__asciidoctor-preview-71__" class="ulist">
+<ul>
+<li id="__asciidoctor-preview-72__">
+<p>Paths form a tree with the system agents as leaves and the PoC-memory as the
+root; intermediate PoCs are nodes on the tree, while caches lie on the edges</p>
+<div id="__asciidoctor-preview-73__" class="ulist">
+<ul>
+<li id="__asciidoctor-preview-74__">
+<p>For example, a private L1 and L2 cache lie on the edge between a system
+agent and the first PoC</p>
+</li>
+</ul>
+</div>
+</li>
+<li id="__asciidoctor-preview-75__">
+<p>PoCs establish a hierarchy</p>
+<div id="__asciidoctor-preview-76__" class="ulist">
+<ul>
+<li id="__asciidoctor-preview-77__">
+<p>At each PoC, the set of agents whose memory accesses are ordered is the
+union of the sets defined by the previous PoCs</p>
+</li>
+</ul>
+</div>
+</li>
+<li id="__asciidoctor-preview-78__">
+<p>Memory accesses on a path obey uniprocessor semantics</p>
+</li>
+<li id="__asciidoctor-preview-79__">
+<p>Caches on the path from a domain PoC to the next PoC are effectively part of
+the domain</p>
+</li>
+<li id="__asciidoctor-preview-80__">
+<p>Caches between PoCs are effectively part of the same domain</p>
+<div id="__asciidoctor-preview-81__" class="ulist">
+<ul>
+<li id="__asciidoctor-preview-82__">
+<p>The access order of caches between PoCs is implementation-defined (?)</p>
+</li>
+</ul>
+</div>
+</li>
+<li id="__asciidoctor-preview-83__">
+<p>PoCs and domains</p>
+</li>
+<li id="__asciidoctor-preview-84__">
+<p>PoCs are accessed serially (?)</p>
+</li>
+</ul>
+</div>
+</div>
+</div>
+<div id="__asciidoctor-preview-85__" class="sidebarblock">
+<div class="content">
+<div class="title">Ignore Me</div>
+<div id="__asciidoctor-preview-86__" class="paragraph">
+<p>Random stuff being worked on:</p>
+</div>
+<div id="__asciidoctor-preview-87__" class="paragraph">
+<p>memory accesses due to loads and stores can be ordered anywhere in a domain, but the
+ultimate point of ordering for the domain is the PoC-domain.
+memory accesses due to CMOs operate to a PoC-domain and guarantee the whole domain
+has been operated on</p>
+</div>
+<div id="__asciidoctor-preview-88__" class="paragraph">
+<p>SW view: POCs define sets of agents that communicate coherently without SW help</p>
+</div>
+<div id="__asciidoctor-preview-89__" class="paragraph">
+<p><strong><em>FIXME:</em></strong> Domains can be mapped outward; within the frontier, outside the frontier</p>
+</div>
+<div id="__asciidoctor-preview-90__" class="paragraph">
+<p>Is there such a thing as a PoC-hart that represents uniprocessor ordering?
+That makes the tree definition a bit more easy since a leaf becomes a PoC (but
+nothing is really converging, unless you consider loads and stores as separate
+things converging)</p>
+</div>
+<div id="__asciidoctor-preview-91__" class="paragraph">
+<p>Structural definition: relative to system agent. L1 is the "first" cache accessed, etc.</p>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_fixme_pma_behaviors">2.2.1. FIXME: PMA Behaviors</h4>
+<div id="__asciidoctor-preview-92__" class="paragraph">
+<p>FIXME: Coherence and cacheability attributes&#8230;&#8203;</p>
+</div>
+<div id="__asciidoctor-preview-93__" class="paragraph">
+<p>Ignore cacheability to enable changes in attribute</p>
+</div>
+<div id="__asciidoctor-preview-94__" class="paragraph">
+<p>Non-coherent implies that no caches are accessed indirectly.</p>
+</div>
+</div>
+</div>
+<div class="sect2">
+<h3 id="_fixme_memory_ordering">2.3. FIXME: Memory Ordering</h3>
+<div class="sect3">
+<h4 id="_preserved_program_order">2.3.1. Preserved Program Order</h4>
+<div id="__asciidoctor-preview-95__" class="paragraph">
+<p>The preserved program order (abbreviated <em>PPO</em> below) rules are defined by the
+RVWMO memory ordering model.
+How the operations resulting from CMO instructions fit into these rules
+is described below.</p>
+</div>
+<div id="__asciidoctor-preview-96__" class="paragraph">
+<p>For cache block management instructions, the resulting invalidate, clean, and
+flush operations behave as stores in the PPO rules subject to one additional
+overlapping address rule. Specifically, if <em>a</em> precedes <em>b</em> in program order,
+then <em>a</em> will precede <em>b</em> in the global memory order if:</p>
+</div>
+<div id="__asciidoctor-preview-97__" class="ulist">
+<ul>
+<li id="__asciidoctor-preview-98__">
+<p><em>a</em> is an invalidate, clean, or flush, <em>b</em> is a load, and <em>a</em> and <em>b</em> access
+overlapping memory addresses</p>
+</li>
+</ul>
+</div>
+<div id="__asciidoctor-preview-99__" class="sidebarblock">
+<div class="content">
+<div id="__asciidoctor-preview-100__" class="paragraph">
+<p><em>The above rule ensures that a subsequent load operation in program order never
+appears in the global memory order before a preceding invalidate, clean, or
+flush operation to an overlapping address.</em></p>
+</div>
+</div>
+</div>
+<div id="__asciidoctor-preview-101__" class="paragraph">
+<p>For cache block write instructions, the resulting write operations simply
+behave as stores in the PPO rules.</p>
+</div>
+<div id="__asciidoctor-preview-102__" class="paragraph">
+<p>As cache block hint instructions do not modify architectural memory state, the
+resulting operations are <em>not</em> ordered by the PPO rules.</p>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_load_values">2.3.2. Load Values</h4>
+<div id="__asciidoctor-preview-103__" class="paragraph">
+<p>In addition, an invalidate operation changes the set of values that may be
+returned by a load. In particular, a third condition is added to the Load Value
+Axiom:</p>
+</div>
+<div id="__asciidoctor-preview-104__" class="olist arabic">
+<ol class="arabic" start="3">
+<li id="__asciidoctor-preview-105__">
+<p>If an invalidate precedes <em>i</em> in program order and operates on a byte, and no
+store to that byte appears in program order or in the global memory order
+between the invalidate and <em>i</em>, the load value is <em>implementation-defined</em></p>
+</li>
+</ol>
+</div>
+<div id="__asciidoctor-preview-106__" class="sidebarblock">
+<div class="content">
+<div id="__asciidoctor-preview-107__" class="paragraph">
+<p>What does global memory order mean for software managed coherence:</p>
+</div>
+<div id="__asciidoctor-preview-108__" class="ulist">
+<ul>
+<li id="__asciidoctor-preview-109__">
+<p>Can describe global to mean "global" for all agents and domains (single universe)</p>
+</li>
+<li id="__asciidoctor-preview-110__">
+<p>Can describe global to mean "global" for some agents and domains (a multiverse)</p>
+</li>
+</ul>
+</div>
+<div id="__asciidoctor-preview-111__" class="paragraph">
+<p>The above definition is written using a multiverse definition for global memory
+order. A single universe definition would constrain the result to orders that
+could be produced by other agents. Maybe&#8230;&#8203;?</p>
+</div>
+</div>
+</div>
+</div>
+<div class="sect3">
+<h4 id="_ordering_events">2.3.3. Ordering Events</h4>
+<div id="__asciidoctor-preview-112__" class="paragraph">
+<p>Ordering event for CMO: access ordered at explicit PoC(-domain)</p>
+</div>
+<div id="__asciidoctor-preview-113__" class="paragraph">
+<p>Ordering event for load: access ordered in the implicit domain</p>
+</div>
+<div id="__asciidoctor-preview-114__" class="paragraph">
+<p>Ordering event for store: access ordered in the implicit domain</p>
+</div>
+<div id="__asciidoctor-preview-115__" class="paragraph">
+<p>PPO specifies the order of the ordering events</p>
+</div>
 </div>
 </div>
 <div class="sect2">
 <h3 id="_fixme_discovery">2.4. FIXME: Discovery</h3>
-<div id="__asciidoctor-preview-62__" class="paragraph">
+<div id="__asciidoctor-preview-116__" class="paragraph">
 <p>FIXME: HW vs. SW</p>
+</div>
+<div id="__asciidoctor-preview-117__" class="paragraph">
+<p>For now, fixed size across all harts and devices that share a domain</p>
 </div>
 </div>
 <div class="sect2">
 <h3 id="_traps">2.5. Traps</h3>
 <div class="sect3">
 <h4 id="_illegal_instruction_and_virtual_instruction_exceptions">2.5.1. Illegal Instruction and Virtual Instruction Exceptions</h4>
-<div id="__asciidoctor-preview-63__" class="paragraph">
+<div id="__asciidoctor-preview-118__" class="paragraph">
 <p>Cache block management instructions and cache block write instructions may take
 an illegal instruction exception depending on the <em>current privilege mode</em> and
-the state of the CMO control registers described <a href="#_csrs">below</a>.
+the state of the CMO control registers described in the <a href="#_csrs">CSRs</a> section.
 The current privilege mode refers to the privilege mode of the hart at the time
 the instruction is executed.</p>
 </div>
-<div id="__asciidoctor-preview-64__" class="paragraph">
+<div id="__asciidoctor-preview-119__" class="paragraph">
 <p>Cache block hint instructions do <em>not</em> take illegal instruction exceptions.</p>
 </div>
-<div id="__asciidoctor-preview-65__" class="paragraph">
+<div id="__asciidoctor-preview-120__" class="paragraph">
 <p>Additionally, CMO instructions do <em>not</em> take virtual instruction exceptions.</p>
 </div>
 </div>
 <div class="sect3">
 <h4 id="_page_fault_and_guest_page_fault_exceptions">2.5.2. Page Fault and Guest-Page Fault Exceptions</h4>
-<div id="__asciidoctor-preview-66__" class="paragraph">
+<div id="__asciidoctor-preview-121__" class="paragraph">
 <p>During address translation, CMO instructions may take a page fault depending on
 the type of instruction, the <em>effective privilege mode</em> (as determined by the
 <code>MPRV</code>, <code>MPV</code>, and <code>MPP</code> bits in <code>mstatus</code>) of the resulting access, and the
@@ -887,44 +1156,44 @@ permissions granted by the page table entry (PTE).
 If two-stage address translation is enabled, CMO instructions may also take a
 guest-page fault.</p>
 </div>
-<div id="__asciidoctor-preview-67__" class="paragraph">
+<div id="__asciidoctor-preview-122__" class="paragraph">
 <p>Cache block management instructions require a valid translation (<code>V=1</code>) and
 either read (<code>R=1</code>) or execute (<code>X=1</code>) permission and, if applicable, user
 access (<code>U=1</code>) in the effective privilege mode.
 If these conditions are <em>not</em> met, the instruction takes a store/AMO page fault
 exception.
 In addition, <code>CBO.INVAL</code> instructions may take a store/AMO page fault exception
-depending on the state of the CMO control registers described <a href="#_csrs">below</a>
-and whether the access has been granted write permission by the PTE.</p>
+depending on the state of the CMO control registers described in the <a href="#_csrs">CSRs</a>
+section and whether the access has been granted write permission by the PTE.</p>
 </div>
-<div id="__asciidoctor-preview-68__" class="paragraph">
+<div id="__asciidoctor-preview-123__" class="paragraph">
 <p>Cache block write instructions require a valid translation (<code>V=1</code>) and write
 (<code>W=1</code>) permission and, if applicable, user access (<code>U=1</code>) in the effective
 privilege mode.
 If these conditions are <em>not</em> met, the instruction takes a store/AMO page fault
 exception.</p>
 </div>
-<div id="__asciidoctor-preview-69__" class="paragraph">
+<div id="__asciidoctor-preview-124__" class="paragraph">
 <p>If G-stage address translation is enabled, the above instructions take a
 store/AMO guest-page fault if the G-stage PTE does <em>not</em> allow the access.</p>
 </div>
-<div id="__asciidoctor-preview-70__" class="paragraph">
+<div id="__asciidoctor-preview-125__" class="paragraph">
 <p>Cache block hint instructions require a valid translation (<code>V=1</code>) and either
 read (<code>R=1</code>) or execute (<code>X=1</code>) permission and, if applicable, user access
 (<code>U=1</code>) in the effective privilege mode.
 If these conditions are <em>not</em> met, however, the instruction does <em>not</em> take a
 page fault or guest-page fault exception and retires without accessing memory.</p>
 </div>
-<div id="__asciidoctor-preview-71__" class="paragraph">
+<div id="__asciidoctor-preview-126__" class="paragraph">
 <p>FIXME: PREFETCH.W interacts with LR/SC; doesn&#8217;t require W=1</p>
 </div>
 <div class="sect4">
 <h5 id="_effect_of_other_xstatus_bits">Effect of other <code>xstatus</code> bits</h5>
-<div id="__asciidoctor-preview-72__" class="paragraph">
+<div id="__asciidoctor-preview-127__" class="paragraph">
 <p>The <code>mstatus.MXR</code> bit (also <code>sstatus.MXR</code>) and the <code>vsstatus.MXR</code> bit do <em>not</em>
 affect the execution of CMO instructions.</p>
 </div>
-<div id="__asciidoctor-preview-73__" class="paragraph">
+<div id="__asciidoctor-preview-128__" class="paragraph">
 <p>The <code>mstatus.SUM</code> bit (also <code>sstatus.SUM</code>) and the <code>vsstatus.SUM</code> bit do <em>not</em>
 affect the execution of CMO instructions beyond modifying permissions for
 S/HS-mode and VS-mode accesses as specified by the privileged architecture.</p>
@@ -933,7 +1202,7 @@ S/HS-mode and VS-mode accesses as specified by the privileged architecture.</p>
 </div>
 <div class="sect3">
 <h4 id="_access_fault_exception">2.5.3. Access Fault Exception</h4>
-<div id="__asciidoctor-preview-74__" class="paragraph">
+<div id="__asciidoctor-preview-129__" class="paragraph">
 <p>A CMO instruction may take an access fault exception, as detailed in the
 privileged architecture specification, that interrupts the address translation
 process.
@@ -943,24 +1212,24 @@ of instruction, the effective privilege mode of the resulting access, and the
 permissions granted by the physical memory protection (PMP) unit and the
 physical memory attributes (PMAs).</p>
 </div>
-<div id="__asciidoctor-preview-75__" class="sidebarblock">
+<div id="__asciidoctor-preview-130__" class="sidebarblock">
 <div class="content">
-<div id="__asciidoctor-preview-76__" class="paragraph">
+<div id="__asciidoctor-preview-131__" class="paragraph">
 <p><em>For now, we assume two things about PMAs:</em></p>
 </div>
-<div id="__asciidoctor-preview-77__" class="olist arabic">
+<div id="__asciidoctor-preview-132__" class="olist arabic">
 <ol class="arabic">
-<li id="__asciidoctor-preview-78__">
+<li id="__asciidoctor-preview-133__">
 <p><em>PMAs are the same for all physical addresses in a cache block</em></p>
 </li>
-<li id="__asciidoctor-preview-79__">
+<li id="__asciidoctor-preview-134__">
 <p><em>Memory that can be cached cannot be write-only</em></p>
 </li>
 </ol>
 </div>
 </div>
 </div>
-<div id="__asciidoctor-preview-80__" class="paragraph">
+<div id="__asciidoctor-preview-135__" class="paragraph">
 <p>Read (<code>R</code>), write (<code>W</code>), and execute (<code>X</code>) permissions are granted by the PMP
 and the PMAs.
 Although the PMP may grant different permissions to different physical
@@ -970,7 +1239,7 @@ granted if write permission has been granted.
 If these PMA constraints are <em>not</em> met, the behavior of CMO instruction is
 UNSPECIFIED.</p>
 </div>
-<div id="__asciidoctor-preview-81__" class="paragraph">
+<div id="__asciidoctor-preview-136__" class="paragraph">
 <p>For the purposes of access fault determination, <em>joint permission</em> is granted
 for a given physical address when the same access type is allowed by both the
 PMP and the PMAs for that physical address.
@@ -982,22 +1251,22 @@ addresses in the cache block, while <em>full joint write permission</em> implies
 joint write permission has been granted to <em>all</em> physical addresses in the
 cache block.</p>
 </div>
-<div id="__asciidoctor-preview-82__" class="paragraph">
+<div id="__asciidoctor-preview-137__" class="paragraph">
 <p>Cache block management instructions require either joint read or joint execute
 permission for <em>all</em> accessed physical addresses.
 If this condition is <em>not</em> met, the instruction takes a store/AMO access fault
 exception.
 In addition, <code>CBO.INVAL</code> instructions may take a store/AMO access fault
-exception depending on the state of the CMO control registers described
-<a href="#_csrs">below</a> and whether the access has been granted partial joint write
+exception depending on the state of the CMO control registers described in the
+<a href="#_csrs">CSRs</a> section and whether the access has been granted partial joint write
 permission by the PMP and PMAs.</p>
 </div>
-<div id="__asciidoctor-preview-83__" class="paragraph">
+<div id="__asciidoctor-preview-138__" class="paragraph">
 <p>Cache block write instructions require full joint write permission.
 If this condition is <em>not</em> met, the instruction takes a store/AMO access fault
 exception.</p>
 </div>
-<div id="__asciidoctor-preview-84__" class="paragraph">
+<div id="__asciidoctor-preview-139__" class="paragraph">
 <p>Cache block hint instructions require either joint read or joint execute
 permission for <em>all</em> accessed physical addresses.
 If this condition is <em>not</em> met, however, the instruction does <em>not</em> take an
@@ -1006,13 +1275,13 @@ access fault exception and retires without accessing memory.</p>
 </div>
 <div class="sect3">
 <h4 id="_address_misaligned_exception">2.5.4. Address Misaligned Exception</h4>
-<div id="__asciidoctor-preview-85__" class="paragraph">
+<div id="__asciidoctor-preview-140__" class="paragraph">
 <p>CMO instructions do <em>not</em> generate address misaligned exceptions.</p>
 </div>
 </div>
 <div class="sect3">
 <h4 id="_breakpoint_exception">2.5.5. Breakpoint Exception</h4>
-<div id="__asciidoctor-preview-86__" class="paragraph">
+<div id="__asciidoctor-preview-141__" class="paragraph">
 <p>CMO instructions may generate breakpoint exceptions (or may cause other debug
 actions) subject to the general trigger module behaviors specified in the debug
 architecture.
@@ -1021,31 +1290,31 @@ address matches is UNSPECIFIED for CMO instructions.
 When <code>type=6</code> (i.e. <code>mcontrol6</code>), the behavior of a trigger for load and store
 address matches is based on the following classification of a CMO instruction:</p>
 </div>
-<div id="__asciidoctor-preview-87__" class="ulist">
+<div id="__asciidoctor-preview-142__" class="ulist">
 <ul>
-<li id="__asciidoctor-preview-88__">
+<li id="__asciidoctor-preview-143__">
 <p>A cache block management instruction is both a load and a store</p>
 </li>
-<li id="__asciidoctor-preview-89__">
+<li id="__asciidoctor-preview-144__">
 <p>A cache block write instruction is a store</p>
 </li>
-<li id="__asciidoctor-preview-90__">
+<li id="__asciidoctor-preview-145__">
 <p>It is <em>implementation-defined</em> whether a cache block hint instruction is both
 a load and a store or neither a load nor a store</p>
 </li>
 </ul>
 </div>
-<div id="__asciidoctor-preview-91__" class="paragraph">
+<div id="__asciidoctor-preview-146__" class="paragraph">
 <p>Load and store data matches for all CMO instructions are UNSPECIFIED.</p>
 </div>
-<div id="__asciidoctor-preview-92__" class="sidebarblock">
+<div id="__asciidoctor-preview-147__" class="sidebarblock">
 <div class="content">
-<div id="__asciidoctor-preview-93__" class="paragraph">
+<div id="__asciidoctor-preview-148__" class="paragraph">
 <p><em>An implementation may convert cache block hint instructions into NOPs prior to
 executing the instruction. Load and store matches are not applicable in such an
 implementation.</em></p>
 </div>
-<div id="__asciidoctor-preview-94__" class="paragraph">
+<div id="__asciidoctor-preview-149__" class="paragraph">
 <p><em>For load and store address matches on a CMO effective address, software should
 program the trigger to match on NAPOT ranges, i.e. <code>mcontrol6.match=1</code>, and
 should program the NAPOT range to equal the cache block size.</em></p>
@@ -1061,31 +1330,31 @@ should program the NAPOT range to equal the cache block size.</em></p>
 <div class="sectionbody">
 <div class="sect2">
 <h3 id="_csrs">3.1. CSRs</h3>
-<div id="__asciidoctor-preview-95__" class="paragraph">
+<div id="__asciidoctor-preview-150__" class="paragraph">
 <p><strong><em>FIXME</em></strong>: How is this extension disabled?</p>
 </div>
-<div id="__asciidoctor-preview-96__" class="paragraph">
+<div id="__asciidoctor-preview-151__" class="paragraph">
 <p>Four CSRs control execution of CMO instructions:</p>
 </div>
-<div id="__asciidoctor-preview-97__" class="ulist">
+<div id="__asciidoctor-preview-152__" class="ulist">
 <ul>
-<li id="__asciidoctor-preview-98__">
+<li id="__asciidoctor-preview-153__">
 <p><code>mcmocontrol</code></p>
 </li>
-<li id="__asciidoctor-preview-99__">
+<li id="__asciidoctor-preview-154__">
 <p><code>scmocontrol</code></p>
 </li>
-<li id="__asciidoctor-preview-100__">
+<li id="__asciidoctor-preview-155__">
 <p><code>hcmocontrol</code></p>
 </li>
-<li id="__asciidoctor-preview-101__">
+<li id="__asciidoctor-preview-156__">
 <p><code>vscmocontrol</code></p>
 </li>
 </ul>
 </div>
-<div id="__asciidoctor-preview-102__" class="sidebarblock">
+<div id="__asciidoctor-preview-157__" class="sidebarblock">
 <div class="content">
-<div id="__asciidoctor-preview-103__" class="paragraph">
+<div id="__asciidoctor-preview-158__" class="paragraph">
 <p><em>The <code>scmocontrol</code> and <code>vscmocontrol</code> registers are both required to
 distinguish CMO execution behavior when the effective privilege mode is U-mode
 or VU-mode, respectively.</em>
@@ -1094,10 +1363,10 @@ enabled.</em></p>
 </div>
 </div>
 </div>
-<div id="__asciidoctor-preview-104__" class="paragraph">
+<div id="__asciidoctor-preview-159__" class="paragraph">
 <p>Each <code>xcmocontrol</code> register has the following generic format:</p>
 </div>
-<table id="__asciidoctor-preview-105__" class="tableblock frame-all grid-all fit-content">
+<table id="__asciidoctor-preview-160__" class="tableblock frame-all grid-all fit-content">
 <caption class="title">Table 1. Generic Format for xcmocontrol CSRs</caption>
 <colgroup>
 <col>
@@ -1264,103 +1533,103 @@ access fault depending on the CSR)</p>
 </tr>
 </tbody>
 </table>
-<div id="__asciidoctor-preview-133__" class="paragraph">
+<div id="__asciidoctor-preview-188__" class="paragraph">
 <p>Each <code>xcmocontrol</code> register is WARL, where CSR reads return the behaviors
 supported by the implementation.</p>
 </div>
-<div id="__asciidoctor-preview-134__" class="paragraph">
+<div id="__asciidoctor-preview-189__" class="paragraph">
 <p>The following subsections detail how the <code>xcmocontrol</code> CSRs govern the
 execution of CMO instructions.</p>
 </div>
 <div class="sect4">
 <h5 id="_determining_illegal_instruction_exceptions">Determining Illegal Instruction Exceptions</h5>
-<div id="__asciidoctor-preview-135__" class="paragraph">
+<div id="__asciidoctor-preview-190__" class="paragraph">
 <p>The descriptions for the <code>CBME</code> and <code>CBZE</code> bits in the <code>xcmocontrol</code> registers
 include a <em>privilege_mode</em> parameter that corresponds to the privilege modes
 controlled by a given CSR. Each CSR defines this parameter as follows:</p>
 </div>
-<div id="__asciidoctor-preview-136__" class="ulist">
+<div id="__asciidoctor-preview-191__" class="ulist">
 <ul>
-<li id="__asciidoctor-preview-137__">
+<li id="__asciidoctor-preview-192__">
 <p>For <code>mcmocontrol</code>, <em>privilege_mode</em> corresponds to S/HS-mode, U-mode,
 VS-mode, and VU-mode</p>
 </li>
-<li id="__asciidoctor-preview-138__">
+<li id="__asciidoctor-preview-193__">
 <p>For <code>scmocontrol</code>, <em>privilege_mode</em> corresponds to U-mode</p>
 </li>
-<li id="__asciidoctor-preview-139__">
+<li id="__asciidoctor-preview-194__">
 <p>For <code>hcmocontrol</code>, <em>privilege_mode</em> corresponds to VS-mode and VU-mode</p>
 </li>
-<li id="__asciidoctor-preview-140__">
+<li id="__asciidoctor-preview-195__">
 <p>For <code>vscmocontrol</code>, <em>privilege_mode</em> corresponds to VU-mode</p>
 </li>
 </ul>
 </div>
-<div id="__asciidoctor-preview-141__" class="paragraph">
+<div id="__asciidoctor-preview-196__" class="paragraph">
 <p>Depending on the <em>current privilege mode</em>, a cache block management instruction
 takes an illegal instruction exception based on the <code>CBME</code> bits:</p>
 </div>
-<div id="__asciidoctor-preview-142__" class="ulist">
+<div id="__asciidoctor-preview-197__" class="ulist">
 <ul>
-<li id="__asciidoctor-preview-143__">
+<li id="__asciidoctor-preview-198__">
 <p>M-mode:<br>
 <code>FALSE</code> (cache block management instructions never take illegal instruction
 exceptions)</p>
 </li>
-<li id="__asciidoctor-preview-144__">
+<li id="__asciidoctor-preview-199__">
 <p>S/HS-mode:<br>
 <code>!mcmocontrol.CBME</code></p>
 </li>
-<li id="__asciidoctor-preview-145__">
+<li id="__asciidoctor-preview-200__">
 <p>U-mode:<br>
 <code>!mcmocontrol.CBME || !scmocontrol.CBME</code></p>
 </li>
-<li id="__asciidoctor-preview-146__">
+<li id="__asciidoctor-preview-201__">
 <p>VS-mode:<br>
 <code>!mcmocontrol.CBME || !hcmocontrol.CBME</code></p>
 </li>
-<li id="__asciidoctor-preview-147__">
+<li id="__asciidoctor-preview-202__">
 <p>VU-mode:<br>
 <code>!mcmocontrol.CBME || !hcmocontrol.CBME || !vscmocontrol.CBME</code></p>
 </li>
 </ul>
 </div>
-<div id="__asciidoctor-preview-148__" class="paragraph">
+<div id="__asciidoctor-preview-203__" class="paragraph">
 <p>Depending on the <em>current privilege mode</em>, a cache block write instruction
 takes an illegal instruction exception based on the <code>CBWE</code> bits:</p>
 </div>
-<div id="__asciidoctor-preview-149__" class="ulist">
+<div id="__asciidoctor-preview-204__" class="ulist">
 <ul>
-<li id="__asciidoctor-preview-150__">
+<li id="__asciidoctor-preview-205__">
 <p>M-mode:<br>
 <code>FALSE</code> (cache block write instructions never take illegal instruction
 exceptions)</p>
 </li>
-<li id="__asciidoctor-preview-151__">
+<li id="__asciidoctor-preview-206__">
 <p>S/HS-mode:<br>
 <code>!mcmocontrol.CBWE</code></p>
 </li>
-<li id="__asciidoctor-preview-152__">
+<li id="__asciidoctor-preview-207__">
 <p>U-mode:<br>
 <code>!mcmocontrol.CBWE || !scmocontrol.CBWE</code></p>
 </li>
-<li id="__asciidoctor-preview-153__">
+<li id="__asciidoctor-preview-208__">
 <p>VS-mode:<br>
 <code>!mcmocontrol.CBWE || !hcmocontrol.CBWE</code></p>
 </li>
-<li id="__asciidoctor-preview-154__">
+<li id="__asciidoctor-preview-209__">
 <p>VU-mode:<br>
 <code>!mcmocontrol.CBWE || !hcmocontrol.CBWE || !vscmocontrol.CBWE</code></p>
 </li>
 </ul>
 </div>
-<div id="__asciidoctor-preview-155__" class="paragraph">
+<div id="__asciidoctor-preview-210__" class="paragraph">
 <p>Otherwise, the above instructions are executed in the <em>current privilege mode</em>.</p>
 </div>
 </div>
 <div class="sect4">
 <h5 id="_determining_page_fault_guest_page_fault_and_access_fault_exceptions">Determining Page Fault, Guest-Page Fault, and Access Fault Exceptions</h5>
-<div id="__asciidoctor-preview-156__" class="paragraph">
+<div id="__asciidoctor-preview-211__" class="paragraph">
 <p>The descriptions for the <code>INVWxE</code> and <code>INVWxI</code> bits in the <code>xcmocontrol</code>
 registers include a <em>protection_mechanism</em> parameter that corresponds to the
 protection mechanism that determines write permission for an access and a
@@ -1368,69 +1637,69 @@ protection mechanism that determines write permission for an access and a
 or not (<code>W0</code>).
 Each CSR defines these as follows:</p>
 </div>
-<div id="__asciidoctor-preview-157__" class="ulist">
+<div id="__asciidoctor-preview-212__" class="ulist">
 <ul>
-<li id="__asciidoctor-preview-158__">
+<li id="__asciidoctor-preview-213__">
 <p>For <code>mcmocontrol</code>, <em>protection_mechanism</em> corresponds to the PMP and PMAs
 and <em>Wx</em> corresponds to whether partial joint write permission has been
 granted by the PMP and PMAs</p>
 </li>
-<li id="__asciidoctor-preview-159__">
+<li id="__asciidoctor-preview-214__">
 <p>For <code>scmocontrol</code>, <em>protection_mechanism</em> corresponds to the <code>satp</code> page
 table and <em>Wx</em> corresponds to whether write permission has been granted by
 the leaf PTE <code>W</code> bit</p>
 </li>
-<li id="__asciidoctor-preview-160__">
+<li id="__asciidoctor-preview-215__">
 <p>For <code>hcmocontrol</code>, <em>protection_mechanism</em> corresponds to the <code>hgatp</code> page
 table and <em>Wx</em> corresponds to whether write permission has been granted by
 the leaf PTE <code>W</code> bit</p>
 </li>
-<li id="__asciidoctor-preview-161__">
+<li id="__asciidoctor-preview-216__">
 <p>For <code>vscmocontrol</code>, <em>protection_mechanism</em> corresponds to the <code>vsatp</code> page
 table and <em>Wx</em> corresponds to whether write permission has been granted by
 the leaf PTE <code>W</code> bit</p>
 </li>
 </ul>
 </div>
-<div id="__asciidoctor-preview-162__" class="paragraph">
+<div id="__asciidoctor-preview-217__" class="paragraph">
 <p>For each CSR, the resulting <code>INVWxE</code> value is determined by the designated
 <em>protection_mechanism</em>, which selects the <code>INVW0E</code> bit if <em>Wx</em>=<code>W0</code> or the
 <code>INVW1E</code> bit if <em>Wx</em>=<code>W1</code>.
 Depending on the <em>effective privilege mode</em>, a <code>CBO.INVAL</code> instruction takes
 the following types of traps based on the <code>INVWxE</code> values:</p>
 </div>
-<div id="__asciidoctor-preview-163__" class="ulist">
+<div id="__asciidoctor-preview-218__" class="ulist">
 <ul>
-<li id="__asciidoctor-preview-164__">
+<li id="__asciidoctor-preview-219__">
 <p>M-mode:</p>
-<div id="__asciidoctor-preview-165__" class="ulist">
+<div id="__asciidoctor-preview-220__" class="ulist">
 <ul>
-<li id="__asciidoctor-preview-166__">
+<li id="__asciidoctor-preview-221__">
 <p><em>N/A</em> (<code>CBO.INVAL</code> never faults due to the CMO control registers)</p>
 </li>
 </ul>
 </div>
 </li>
-<li id="__asciidoctor-preview-167__">
+<li id="__asciidoctor-preview-222__">
 <p>S/HS-mode:</p>
-<div id="__asciidoctor-preview-168__" class="ulist">
+<div id="__asciidoctor-preview-223__" class="ulist">
 <ul>
-<li id="__asciidoctor-preview-169__">
+<li id="__asciidoctor-preview-224__">
 <p>Access fault:<br>
 <code>!(mcmocontrol.INVWxE)</code></p>
 </li>
 </ul>
 </div>
 </li>
-<li id="__asciidoctor-preview-170__">
+<li id="__asciidoctor-preview-225__">
 <p>U-mode:</p>
-<div id="__asciidoctor-preview-171__" class="ulist">
+<div id="__asciidoctor-preview-226__" class="ulist">
 <ul>
-<li id="__asciidoctor-preview-172__">
+<li id="__asciidoctor-preview-227__">
 <p>Page fault:<br>
 <code>!(scmocontrol.INVWxE || satp.MODE==Bare)</code></p>
 </li>
-<li id="__asciidoctor-preview-173__">
+<li id="__asciidoctor-preview-228__">
 <p>Access fault:<br>
 <code>(scmocontrol.INVWxE || satp.MODE==Bare) &amp;&amp;</code><br>
 <code>!(mcmocontrol.INVWxE)</code></p>
@@ -1438,15 +1707,15 @@ the following types of traps based on the <code>INVWxE</code> values:</p>
 </ul>
 </div>
 </li>
-<li id="__asciidoctor-preview-174__">
+<li id="__asciidoctor-preview-229__">
 <p>VS-mode:</p>
-<div id="__asciidoctor-preview-175__" class="ulist">
+<div id="__asciidoctor-preview-230__" class="ulist">
 <ul>
-<li id="__asciidoctor-preview-176__">
+<li id="__asciidoctor-preview-231__">
 <p>Guest-page fault:<br>
 <code>!(hcmocontrol.INVWxE || hgatp.MODE==Bare)</code></p>
 </li>
-<li id="__asciidoctor-preview-177__">
+<li id="__asciidoctor-preview-232__">
 <p>Access fault:<br>
 <code>(hcmocontrol.INVWxE || hgatp.MODE==Bare) &amp;&amp;</code><br>
 <code>!(mcmocontrol.INVWxE)</code></p>
@@ -1454,20 +1723,20 @@ the following types of traps based on the <code>INVWxE</code> values:</p>
 </ul>
 </div>
 </li>
-<li id="__asciidoctor-preview-178__">
+<li id="__asciidoctor-preview-233__">
 <p>VU-mode:</p>
-<div id="__asciidoctor-preview-179__" class="ulist">
+<div id="__asciidoctor-preview-234__" class="ulist">
 <ul>
-<li id="__asciidoctor-preview-180__">
+<li id="__asciidoctor-preview-235__">
 <p>Page fault:<br>
 <code>!(vscmocontrol.INVWxE || vsatp.MODE==Bare)</code></p>
 </li>
-<li id="__asciidoctor-preview-181__">
+<li id="__asciidoctor-preview-236__">
 <p>Guest-page fault:<br>
 <code>(vscmocontrol.INVWxE || vsatp.MODE==Bare) &amp;&amp;</code><br>
 <code>!(hcmocontrol.INVWxE || hgatp.MODE==Bare)</code></p>
 </li>
-<li id="__asciidoctor-preview-182__">
+<li id="__asciidoctor-preview-237__">
 <p>Access fault:<br>
 <code>(vscmocontrol.INVWxE || vsatp.MODE==Bare) &amp;&amp;</code><br>
 <code>(hcmocontrol.INVWxE || hgatp.MODE==Bare) &amp;&amp;</code><br>
@@ -1478,15 +1747,15 @@ the following types of traps based on the <code>INVWxE</code> values:</p>
 </li>
 </ul>
 </div>
-<div id="__asciidoctor-preview-183__" class="sidebarblock">
+<div id="__asciidoctor-preview-238__" class="sidebarblock">
 <div class="content">
-<div id="__asciidoctor-preview-184__" class="paragraph">
+<div id="__asciidoctor-preview-239__" class="paragraph">
 <p><em>The above exception priorities reflect the architected exception priorities in
 the privileged architecture specification.</em></p>
 </div>
 </div>
 </div>
-<div id="__asciidoctor-preview-185__" class="paragraph">
+<div id="__asciidoctor-preview-240__" class="paragraph">
 <p>For each CSR, the resulting <code>INVWxI</code> value is determined by the designated
 <em>protection_mechanism</em>, which selects the <code>INVW0I</code> bit if <em>Wx</em>=<code>W0</code> or the
 <code>INVW1I</code> bit if <em>Wx</em>=<code>W1</code>, if that protection mechanism is enabled.
@@ -1497,77 +1766,77 @@ Assuming that no exception arises and depending on the
 <em>effective privilege mode</em>, a <code>CBO.INVAL</code> instruction performs the following
 operations based on the <code>INVWxI</code> values:</p>
 </div>
-<div id="__asciidoctor-preview-186__" class="ulist">
+<div id="__asciidoctor-preview-241__" class="ulist">
 <ul>
-<li id="__asciidoctor-preview-187__">
+<li id="__asciidoctor-preview-242__">
 <p>M-mode:</p>
-<div id="__asciidoctor-preview-188__" class="ulist">
+<div id="__asciidoctor-preview-243__" class="ulist">
 <ul>
-<li id="__asciidoctor-preview-189__">
+<li id="__asciidoctor-preview-244__">
 <p>Flush:<br>
 <code>FALSE</code> (<code>CBO.INVAL</code> never performs a flush operation)</p>
 </li>
-<li id="__asciidoctor-preview-190__">
+<li id="__asciidoctor-preview-245__">
 <p>Invalidate:<br>
 <code>TRUE</code> (<code>CBO.INVAL</code> always performs an invalidate operation)</p>
 </li>
 </ul>
 </div>
 </li>
-<li id="__asciidoctor-preview-191__">
+<li id="__asciidoctor-preview-246__">
 <p>S-mode:</p>
-<div id="__asciidoctor-preview-192__" class="ulist">
+<div id="__asciidoctor-preview-247__" class="ulist">
 <ul>
-<li id="__asciidoctor-preview-193__">
+<li id="__asciidoctor-preview-248__">
 <p>Flush:<br>
 <code>!(mcmocontrol.INVWxI)</code></p>
 </li>
-<li id="__asciidoctor-preview-194__">
+<li id="__asciidoctor-preview-249__">
 <p>Invalidate:<br>
 <code>(mcmocontrol.INVWxI)</code></p>
 </li>
 </ul>
 </div>
 </li>
-<li id="__asciidoctor-preview-195__">
+<li id="__asciidoctor-preview-250__">
 <p>U-mode:</p>
-<div id="__asciidoctor-preview-196__" class="ulist">
+<div id="__asciidoctor-preview-251__" class="ulist">
 <ul>
-<li id="__asciidoctor-preview-197__">
+<li id="__asciidoctor-preview-252__">
 <p>Flush:<br>
 <code>!(scmocontrol.INVWxI &amp;&amp; mcmocontrol.INVWxI)</code></p>
 </li>
-<li id="__asciidoctor-preview-198__">
+<li id="__asciidoctor-preview-253__">
 <p>Invalidate:<br>
 <code>(scmocontrol.INVWxI &amp;&amp; mcmocontrol.INVWxI)</code></p>
 </li>
 </ul>
 </div>
 </li>
-<li id="__asciidoctor-preview-199__">
+<li id="__asciidoctor-preview-254__">
 <p>VS-mode:</p>
-<div id="__asciidoctor-preview-200__" class="ulist">
+<div id="__asciidoctor-preview-255__" class="ulist">
 <ul>
-<li id="__asciidoctor-preview-201__">
+<li id="__asciidoctor-preview-256__">
 <p>Flush:<br>
 <code>!(hcmocontrol.INVWxI &amp;&amp; mcmocontrol.INVWxI)</code></p>
 </li>
-<li id="__asciidoctor-preview-202__">
+<li id="__asciidoctor-preview-257__">
 <p>Invalidate:<br>
 <code>(hcmocontrol.INVWxI &amp;&amp; mcmocontrol.INVWxI)</code></p>
 </li>
 </ul>
 </div>
 </li>
-<li id="__asciidoctor-preview-203__">
+<li id="__asciidoctor-preview-258__">
 <p>VU-mode:</p>
-<div id="__asciidoctor-preview-204__" class="ulist">
+<div id="__asciidoctor-preview-259__" class="ulist">
 <ul>
-<li id="__asciidoctor-preview-205__">
+<li id="__asciidoctor-preview-260__">
 <p>Flush:<br>
 <code>!(vscmocontrol.INVWxI &amp;&amp; hcmocontrol.INVWxI &amp;&amp; mcmocontrol.INVWxI)</code></p>
 </li>
-<li id="__asciidoctor-preview-206__">
+<li id="__asciidoctor-preview-261__">
 <p>Invalidate:<br>
 <code>(vscmocontrol.INVWxI &amp;&amp; hcmocontrol.INVWxI &amp;&amp; mcmocontrol.INVWxI)</code></p>
 </li>
@@ -1576,9 +1845,9 @@ operations based on the <code>INVWxI</code> values:</p>
 </li>
 </ul>
 </div>
-<div id="__asciidoctor-preview-207__" class="sidebarblock">
+<div id="__asciidoctor-preview-262__" class="sidebarblock">
 <div class="content">
-<div id="__asciidoctor-preview-208__" class="paragraph">
+<div id="__asciidoctor-preview-263__" class="paragraph">
 <p><em>Until a modified cache block has updated memory, a <code>CBO.INVAL</code> instruction may
 expose stale data values in memory if the CSRs are programmed to perform an
 invalidate operation.</em>
@@ -1588,7 +1857,7 @@ performs an invalidate operation and accesses sensitive information in memory.</
 clean or flush operation on the cache block before permitting lower privileged
 level software to perform an invalidate operation on the block.</em></p>
 </div>
-<div id="__asciidoctor-preview-209__" class="paragraph">
+<div id="__asciidoctor-preview-264__" class="paragraph">
 <p><em>Alternatively, higher privileged level software may program the CSRs so that
 <code>CBO.INVAL</code> either traps or performs a flush operation in a lower privileged
 level.</em>
@@ -1608,21 +1877,21 @@ mechanism.</em></p>
 <div class="sectionbody">
 <div class="sect2">
 <h3 id="_cache_block_management_instructions">4.1. Cache Block Management Instructions</h3>
-<div id="__asciidoctor-preview-210__" class="paragraph">
+<div id="__asciidoctor-preview-265__" class="paragraph">
 <p>Cache block management instructions operate on the cache blocks containing the
 effective address specified in <em>rs1</em>.
 These instructions also specify a <em>PoC</em> that, along with the coherence PMA,
 determines the set of caches on which the operation is performed.
 In particular, the set of caches consists of one of the following:</p>
 </div>
-<div id="__asciidoctor-preview-211__" class="ulist">
+<div id="__asciidoctor-preview-266__" class="ulist">
 <ul>
-<li id="__asciidoctor-preview-212__">
+<li id="__asciidoctor-preview-267__">
 <p>If the coherence PMA indicates that hardware enforces coherence on the
 physical address, all the caches accessed by the hart directly and indirectly
 in the coherence domains on the path from the hart to the <em>PoC</em></p>
 </li>
-<li id="__asciidoctor-preview-213__">
+<li id="__asciidoctor-preview-268__">
 <p>If the coherence PMA indicates that hardware does <em>not</em> enforce coherence on
 the physical address, only the caches accessed by the hart directly on the
 path from the hart to the <em>PoC</em></p>
@@ -1631,7 +1900,7 @@ path from the hart to the <em>PoC</em></p>
 </div>
 <div class="sect3">
 <h4 id="_cbo_inval">4.1.1. <code>CBO.INVAL</code></h4>
-<div id="__asciidoctor-preview-214__" class="paragraph">
+<div id="__asciidoctor-preview-269__" class="paragraph">
 <p>A <code>CBO.INVAL</code> instruction performs an <em>invalidate</em> operation or a <em>flush</em>
 operation, depending on the state of the CMO CSRs, on the set of caches
 determined by the <em>PoC</em> and the coherence PMA.</p>
@@ -1639,14 +1908,14 @@ determined by the <em>PoC</em> and the coherence PMA.</p>
 </div>
 <div class="sect3">
 <h4 id="_cbo_clean">4.1.2. <code>CBO.CLEAN</code></h4>
-<div id="__asciidoctor-preview-215__" class="paragraph">
+<div id="__asciidoctor-preview-270__" class="paragraph">
 <p>A <code>CBO.CLEAN</code> instruction performs a <em>clean</em> operation on the set of caches
 determined by the <em>PoC</em> and the coherence PMA.</p>
 </div>
 </div>
 <div class="sect3">
 <h4 id="_cbo_flush">4.1.3. <code>CBO.FLUSH</code></h4>
-<div id="__asciidoctor-preview-216__" class="paragraph">
+<div id="__asciidoctor-preview-271__" class="paragraph">
 <p>A <code>CBO.FLUSH</code> instruction performs a <em>flush</em> operation on the set of caches
 determined by the <em>PoC</em> and the coherence PMA.</p>
 </div>
@@ -1654,37 +1923,37 @@ determined by the <em>PoC</em> and the coherence PMA.</p>
 </div>
 <div class="sect2">
 <h3 id="_cache_block_write_instruction">4.2. Cache Block Write Instruction</h3>
-<div id="__asciidoctor-preview-217__" class="paragraph">
+<div id="__asciidoctor-preview-272__" class="paragraph">
 <p>Cache block write instructions operate on the cache blocks containing the
 effective address specified in <em>rs1</em>.
 These instructions also specify a <em>level</em>, which is a hint to the hardware to
 allocate the cache block in a designated cache.
 <em>level</em> is specified as follows:</p>
 </div>
-<div id="__asciidoctor-preview-218__" class="ulist">
+<div id="__asciidoctor-preview-273__" class="ulist">
 <ul>
-<li id="__asciidoctor-preview-219__">
+<li id="__asciidoctor-preview-274__">
 <p><code>default</code>&#8201;&#8212;&#8201;an <em>implementation-defined</em> level, which may be a function of
 physical addresses, dynamic allocation policies, or any other characteristic</p>
 </li>
-<li id="__asciidoctor-preview-220__">
+<li id="__asciidoctor-preview-275__">
 <p><code>L1</code>&#8201;&#8212;&#8201;the first cache logically accessed by a hart on the path to memory</p>
 </li>
-<li id="__asciidoctor-preview-221__">
+<li id="__asciidoctor-preview-276__">
 <p><code>L2</code>&#8201;&#8212;&#8201;the second cache logically accessed by a hart on the path to memory</p>
 </li>
-<li id="__asciidoctor-preview-222__">
+<li id="__asciidoctor-preview-277__">
 <p><code>L3</code>&#8201;&#8212;&#8201;the third cache logically accessed by a hart on the path to memory</p>
 </li>
 </ul>
 </div>
-<div id="__asciidoctor-preview-223__" class="paragraph">
+<div id="__asciidoctor-preview-278__" class="paragraph">
 <p>An implementation may ignore <em>level</em> and assume <em>level</em> is <code>default</code> for all
 cache block write instructions.</p>
 </div>
-<div id="__asciidoctor-preview-224__" class="sidebarblock">
+<div id="__asciidoctor-preview-279__" class="sidebarblock">
 <div class="content">
-<div id="__asciidoctor-preview-225__" class="paragraph">
+<div id="__asciidoctor-preview-280__" class="paragraph">
 <p><em>To a certain degree, level is implementation-defined for all systems; however,
 <code>L1</code>, <code>L2</code>, and <code>L3</code> are intended to communicate their common, informal
 meaning.</em></p>
@@ -1693,7 +1962,7 @@ meaning.</em></p>
 </div>
 <div class="sect3">
 <h4 id="_cbo_zero">4.2.1. <code>CBO.ZERO</code></h4>
-<div id="__asciidoctor-preview-226__" class="paragraph">
+<div id="__asciidoctor-preview-281__" class="paragraph">
 <p>A <code>CBO.ZERO</code> instruction performs a series of byte writes whose data value
 equals zero to all the bytes in a cache block.
 An implementation may write any number of bytes in the cache block atomically.
@@ -1704,37 +1973,37 @@ block in the cache specified by <em>level</em>.</p>
 </div>
 <div class="sect2">
 <h3 id="_cache_block_hint_instructions">4.3. Cache Block Hint Instructions</h3>
-<div id="__asciidoctor-preview-227__" class="paragraph">
+<div id="__asciidoctor-preview-282__" class="paragraph">
 <p>Cache block hint instructions operate on the cache blocks containing the
 effective address specified in <em>rs1</em>.
 These instructions also specify a <em>level</em>, which is a hint to the hardware to
 allocate the cache block in a designated cache.
 <em>level</em> is specified as follows:</p>
 </div>
-<div id="__asciidoctor-preview-228__" class="ulist">
+<div id="__asciidoctor-preview-283__" class="ulist">
 <ul>
-<li id="__asciidoctor-preview-229__">
+<li id="__asciidoctor-preview-284__">
 <p><code>default</code>&#8201;&#8212;&#8201;an <em>implementation-defined</em> level, which may be a function of
 physical addresses, dynamic allocation policies, or any other characteristic</p>
 </li>
-<li id="__asciidoctor-preview-230__">
+<li id="__asciidoctor-preview-285__">
 <p><code>L1</code>&#8201;&#8212;&#8201;the first cache logically accessed by a hart on the path to memory</p>
 </li>
-<li id="__asciidoctor-preview-231__">
+<li id="__asciidoctor-preview-286__">
 <p><code>L2</code>&#8201;&#8212;&#8201;the second cache logically accessed by a hart on the path to memory</p>
 </li>
-<li id="__asciidoctor-preview-232__">
+<li id="__asciidoctor-preview-287__">
 <p><code>L3</code>&#8201;&#8212;&#8201;the third cache logically accessed by a hart on the path to memory</p>
 </li>
 </ul>
 </div>
-<div id="__asciidoctor-preview-233__" class="paragraph">
+<div id="__asciidoctor-preview-288__" class="paragraph">
 <p>An implementation may ignore <em>level</em> and assume <em>level</em> is <code>default</code> for all
 cache block hint instructions.</p>
 </div>
-<div id="__asciidoctor-preview-234__" class="sidebarblock">
+<div id="__asciidoctor-preview-289__" class="sidebarblock">
 <div class="content">
-<div id="__asciidoctor-preview-235__" class="paragraph">
+<div id="__asciidoctor-preview-290__" class="paragraph">
 <p><em>To a certain degree, level is implementation-defined for all systems; however,
 <code>L1</code>, <code>L2</code>, and <code>L3</code> are intended to communicate their common, informal
 meaning.</em></p>
@@ -1742,20 +2011,70 @@ meaning.</em></p>
 </div>
 </div>
 <div class="sect3">
-<h4 id="_fixme_prefetch_r">4.3.1. FIXME: <code>PREFETCH.R</code></h4>
-
+<h4 id="_prefetch_r">4.3.1. <code>PREFETCH.R</code></h4>
+<div id="__asciidoctor-preview-291__" class="paragraph">
+<p>A <code>PREFETCH.R</code> instruction indicates to the cache at the specified <em>level</em> that
+a subsequent read operation is likely to be performed on the cache block at the
+specified effective address in the near future.</p>
+</div>
+<div id="__asciidoctor-preview-292__" class="paragraph">
+<p>An implementation typically allocates the cache block in the cache at the
+specified <em>level</em> in a state that allows read access; however, the instruction
+is <em>not</em> guaranteed to allocate the cache block in that cache.</p>
+</div>
 </div>
 <div class="sect3">
-<h4 id="_fixme_prefetch_w">4.3.2. FIXME: <code>PREFETCH.W</code></h4>
-
+<h4 id="_prefetch_w">4.3.2. <code>PREFETCH.W</code></h4>
+<div id="__asciidoctor-preview-293__" class="paragraph">
+<p>A <code>PREFETCH.W</code> instruction indicates to the cache at the specified <em>level</em> that
+a subsequent write operation is likely to be performed on the cache block at
+the specified effective address in the near future.</p>
+</div>
+<div id="__asciidoctor-preview-294__" class="paragraph">
+<p>An implementation typically allocates the cache block in the cache at the
+specified <em>level</em> in a state that allows write access; however, the instruction
+is <em>not</em> guaranteed to allocate the cache block in that cache.</p>
+</div>
+<div id="__asciidoctor-preview-295__" class="paragraph">
+<p>A PREFETCH.W instruction may interfere with the eventual success guarantee of
+store-conditional instructions.</p>
+</div>
 </div>
 <div class="sect3">
-<h4 id="_fixme_prefetch_i">4.3.3. FIXME: <code>PREFETCH.I</code></h4>
-
+<h4 id="_prefetch_i">4.3.3. <code>PREFETCH.I</code></h4>
+<div id="__asciidoctor-preview-296__" class="paragraph">
+<p>A <code>PREFETCH.I</code> instruction indicates to the cache at the specified <em>level</em> that
+a subsequent instruction fetch operation is likely to be performed on the
+cache block at the specified effective address in the near future.</p>
+</div>
+<div id="__asciidoctor-preview-297__" class="paragraph">
+<p>An implementation typically allocates the cache block in the cache at the
+specified <em>level</em> in a state that allows instruction fetch access; however, the
+instruction is <em>not</em> guaranteed to allocate the cache block in that cache.</p>
+</div>
+<div id="__asciidoctor-preview-298__" class="paragraph">
+<p>Instruction fetch operations may access caches different from those accessed by
+read and write operations.
+It is <em>implementation-defined</em> whether the cache at the specified <em>level</em> in a
+<code>PREFETCH.I</code> instruction is the same cache at the specified <em>level</em> in a
+<code>PREFETCH.R</code> or <code>PREFETCH.W</code> instruction.</p>
+</div>
 </div>
 <div class="sect3">
-<h4 id="_fixme_demote">4.3.4. FIXME: <code>DEMOTE</code></h4>
-
+<h4 id="_demote">4.3.4. <code>DEMOTE</code></h4>
+<div id="__asciidoctor-preview-299__" class="paragraph">
+<p>A <code>DEMOTE</code> instruction indicates to the cache at the specified <em>level</em> that the
+cache block at the specified effective address is no longer required to be
+cached.</p>
+</div>
+<div id="__asciidoctor-preview-300__" class="sidebarblock">
+<div class="content">
+<div id="__asciidoctor-preview-301__" class="paragraph">
+<p><em>Typically, a <code>DEMOTE</code> instruction operates on the replacement algorithm</em>
+<em>information for a cache block rather than the cache block itself.</em></p>
+</div>
+</div>
+</div>
 </div>
 </div>
 <div class="sect2">
@@ -1771,112 +2090,91 @@ meaning.</em></p>
 <h2 id="_opcode_map">5. Opcode Map</h2>
 <div class="sectionbody">
 <hr>
-<div id="__asciidoctor-preview-237__" class="paragraph text-center">
+<div id="__asciidoctor-preview-303__" class="paragraph text-center">
 <p><strong>FIXME BEYOND HERE</strong></p>
 </div>
 <hr>
-<div id="__asciidoctor-preview-239__" class="listingblock">
+<div id="__asciidoctor-preview-305__" class="sidebarblock">
 <div class="content">
-<pre>=== FIXME: Memory Ordering
-
-From a memory ordering perspective, a memory access resulting from a cache operation instruction is considered to be a load operation or a store operation in the RVWMO memory ordering model depending on the instruction:
-
-* Cache block management instructions are generally considered to be store operations; however, like AMOs, the store operations generated by these instructions must be ordered with respect to subsequent loads to overlapping addresses in program order
-* Cache block write instructions are considered to be store operations
-* Cache block hint instructions are considered to be load operations
-
-Cache management operations are ordered with respect to other load operations, store operations, and cache management operations as specified by RVWMO, subject to any additional constraints defined above.
-In particular, overlapping address orderings are preserved (with the additional constraints defined above), while a `FENCE` instruction may be used to order cache management operations with respect to operations to non-overlapping addresses.
-The other RVWMO ordering rules apply as well.
-
-For a cache block management instruction, the _effects_ of the resulting operation are ordered with respect to any other required operations.
-In other words, such a cache operation is considered to be ordered once the operation is performed with respect to the required system agents.
-
-****
-_The existing `FENCE` instruction is sufficient to order the cache management operations in the base extension._
-_In future extensions, an additional fence instruction may be required to determine when certain cache management operations are complete._
-****
-
-
-
-* 000x - trap W1; trap W0; flush disable
-* 00x0 - trap W1; trap W0; flush disable
-* 0011 - trap W1; trap W0; inval disable
-
-* 0100 - trap W1; flush W0; flush disable
-* 0101 - trap W1; inval W0; flush disable
-* 0110 - trap W1; flush W0; flush disable
-* 0111 - trap W1; inval W0; inval disable
-
-* 1000 - flush W1; trap W0; flush disable
-* 1001 - flush W1; trap W0; flush disable
-* 1010 - inval W1; trap W0; flush disable
-* 1011 - inval W1; trap W0; inval disable
-
-* 1100 - flush W1; flush W0; flush disable
-* 1101 - flush W1; inval W0; flush disable
-* 1110 - inval W1; flush W0; flush disable
-* 1111 - inval W1; inval W0; inval disable
-
-
-
-
-* M-mode:
-  **  _N/A_ (CBO.INVAL never faults due to the CMO control registers)
-* S/HS-mode:
-  ** Access fault: +
-    `!(mcmocontrol.INVWxE)`
-* U-mode:
-  ** Access fault: +
-    `!(mcmocontrol.INVWxE)`
-  ** Page fault: +
-    `(mcmocontrol.INVWxE) &amp;&amp;` +
-    `!(scmocontrol.INVWxE || satp.MODE==Bare)`
-* VS-mode:
-  ** Access fault: +
-    `(!mcmocontrol.INVWxE)`
-  ** Guest-page fault: +
-    `(mcmocontrol.INVWxE) &amp;&amp;` +
-    `!(hcmocontrol.INVWxE || hgatp.MODE==Bare)`
-* VU-mode:
-  ** Access fault: +
-    `!(mcmocontrol.INVWxE)`
-  ** Guest-page fault: +
-    `(mcmocontrol.INVWxE) &amp;&amp;` +
-    `!(hcmocontrol.INVWxE || hgatp.MODE==Bare)`
-  ** Page fault: +
-    `(mcmocontrol.INVWxE) &amp;&amp;` +
-    `(hcmocontrol.INVWxE || hgatp.MODE==Bare) &amp;&amp;` +
-    `!(vscmocontrol.INVWxE || vsatp.MODE==Bare)`
-
-
-
-
-
-
-| [9:8]   | `INVW0`  | CBO.INVAL access without write permission (`_Wx_=0`).
-
-Determines the behavior of a CBO.INVAL instruction when the corresponding
-access does _not_ have write permission in the effective privilege mode:
-
-* `0`: Execution results in an exception (page fault, guest-page fault, or
-  access fault) [trap]
-* `1`: _Reserved_ (aliases to `0`)
-* `2`: Execution performs a flush operation [flush]
-* `3`: Execution performs an invalidate operation [invalidate]
-
-| [11:10] | `INVW1`  | CBO.INVAL access with write permission (`_Wx_=1`).
-
-Determines the behavior of a CBO.INVAL instruction when the corresponding
-access has write permission in the effective privilege mode:
-
-* `0`: Execution results in an exception (page fault, guest-page fault, or
-  access fault depending on the CSR) [trap]
-* `1`: _Reserved_ (aliases to `0`)
-* `2`: Execution performs a flush operation [flush]
-* `3`: Execution performs an invalidate operation [invalidate]
-
-|         |          |</pre>
+<div class="title">Ignore Me</div>
+<div id="__asciidoctor-preview-306__" class="paragraph">
+<p>PoC Wording:</p>
+</div>
+<div id="__asciidoctor-preview-307__" class="paragraph">
+<p>Paths converge at a <em>point of convergence</em>, or <em>PoC</em>, which designates the
+point at which a set of memory accesses to the same memory location is
+logically ordered.
+Once ordered by a PoC, a memory access in the set cannot be reordered with
+respect to other memory accesses in the set, and the set of memory accesses
+shares the remainder of the path to the memory location.</p>
+</div>
+<div id="__asciidoctor-preview-308__" class="paragraph">
+<p>The fundamental PoC for a given physical
+address is the <em>point of convergence for memory</em>, or <em>PoC-memory</em>, which is the
+PoC where all paths for that physical address converge, independent of all
+other characteristics that define a path.</p>
+</div>
+<div id="__asciidoctor-preview-309__" class="paragraph">
+<p>Memory Ordering Wording:</p>
+</div>
+<div id="__asciidoctor-preview-310__" class="paragraph">
+<p><em>The existing <code>FENCE</code> instruction is sufficient to order the cache management operations in the base extension.</em>
+<em>In future extensions, an additional fence instruction may be required to determine when certain cache management operations are complete.</em></p>
+</div>
+<div id="__asciidoctor-preview-311__" class="paragraph">
+<p>CSR stuff:</p>
+</div>
+<div id="__asciidoctor-preview-312__" class="paragraph">
+<p>| [9:8]   | <code>INVW0</code>  | CBO.INVAL access without write permission (<code><em>Wx</em>=0</code>).</p>
+</div>
+<div id="__asciidoctor-preview-313__" class="paragraph">
+<p>Determines the behavior of a CBO.INVAL instruction when the corresponding
+access does <em>not</em> have write permission in the effective privilege mode:</p>
+</div>
+<div id="__asciidoctor-preview-314__" class="ulist">
+<ul>
+<li id="__asciidoctor-preview-315__">
+<p><code>0</code>: Execution results in an exception (page fault, guest-page fault, or
+access fault) [trap]</p>
+</li>
+<li id="__asciidoctor-preview-316__">
+<p><code>1</code>: <em>Reserved</em> (aliases to <code>0</code>)</p>
+</li>
+<li id="__asciidoctor-preview-317__">
+<p><code>2</code>: Execution performs a flush operation [flush]</p>
+</li>
+<li id="__asciidoctor-preview-318__">
+<p><code>3</code>: Execution performs an invalidate operation [invalidate]</p>
+</li>
+</ul>
+</div>
+<div id="__asciidoctor-preview-319__" class="paragraph">
+<p>| [11:10] | <code>INVW1</code>  | CBO.INVAL access with write permission (<code><em>Wx</em>=1</code>).</p>
+</div>
+<div id="__asciidoctor-preview-320__" class="paragraph">
+<p>Determines the behavior of a CBO.INVAL instruction when the corresponding
+access has write permission in the effective privilege mode:</p>
+</div>
+<div id="__asciidoctor-preview-321__" class="ulist">
+<ul>
+<li id="__asciidoctor-preview-322__">
+<p><code>0</code>: Execution results in an exception (page fault, guest-page fault, or
+access fault depending on the CSR) [trap]</p>
+</li>
+<li id="__asciidoctor-preview-323__">
+<p><code>1</code>: <em>Reserved</em> (aliases to <code>0</code>)</p>
+</li>
+<li id="__asciidoctor-preview-324__">
+<p><code>2</code>: Execution performs a flush operation [flush]</p>
+</li>
+<li id="__asciidoctor-preview-325__">
+<p><code>3</code>: Execution performs an invalidate operation [invalidate]</p>
+</li>
+</ul>
+</div>
+<div id="__asciidoctor-preview-326__" class="paragraph">
+<p>|         |          |</p>
+</div>
 </div>
 </div>
 </div>
