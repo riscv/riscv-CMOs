@@ -116,7 +116,7 @@ a modified copy may be present in another cache at the same time.
 Furthermore, the state of the cache block may also be communicated when the 
 block is transferred to or from the cache.
 These policies and mechanisms are typically defined by a cache coherence 
-protocol (see the <<_system_organization>> section) and are beyond the scope of 
+protocol (see the <<_system_topology>> section) and are beyond the scope of 
 this specification.
 
 A transition from invalid to valid occurs when a cache allocates a cache block, 
@@ -184,12 +184,11 @@ Finally, a cache block hint instruction may perform an _implementation-defined_
 operation or no operation, the latter of which does not affect the state of the 
 cache.
 
-=== System Organization
+=== System Topology
 
-Caches are logically situated between system agents and memory agents.
-A memory access from a given system agent to a given memory location may access 
-any number of caches on a _memory access path_ (or _path_ for short), which is 
-determined primarily by the following characteristics:
+A memory access from a CMO instruction proceeds along _memory access path_ (or 
+_path_ for short) from a given system agent toward a given memory location.
+A path is determined primarily by the following characteristics:
 
 * The physical address of the memory access
 * The memory attributes associated with the memory access
@@ -197,26 +196,86 @@ determined primarily by the following characteristics:
 The physical address identifies the memory location being accessed and is a 
 function of the effective address specified by a CMO instruction and any 
 enabled translation mechanisms.
-In addition, memory attributes may be specified by either architectural or 
-_implementation-defined_ mechanisms.
+In addition, the memory attributes for a memory access may be specified by 
+either architectural or _implementation-defined_ mechanisms.
 Other factors, such as type of operation, may also influence the path.
 
 ****
-_In particular, paths for memory accesses with the same memory attributes from_
-_the same system agent to different memory locations may be different._
-_Additionally, paths for memory accesses with different memory attributes from_
-_the same agent to the same memory location may be different._
+_The memory attributes that typically affect a path are related to cacheability_
+_and coherence; however, other memory attributes may affect a path._
+
+_From the same system agent, paths for memory accesses with the same memory_
+_attributes to different memory locations may be different._
+_Likewise, paths for memory accesses with different memory attributes to the_
+_same memory location may be different._
 ****
 
-Since caches introduce multiple copies of cache blocks, a system may implement 
-a _cache coherence_ mechanism in hardware to ensure that the copies in a set of 
+Paths from different system agents to the same memory location converge at a 
+_point of convergence_ (or _PoC_), and from a given PoC, the paths that have 
+converged do not diverge.
+In addition, the memory accesses on those paths are ordered, and remain 
+ordered, with respect to each other from a PoC until the memory accesses can be 
+completed.
+A PoC is _not_ required to order memory accesses to different memory locations.
+Once an order has been established, those memory accesses are considered to be 
+_access ordered_ and cannot be reordered within the system.
+
+****
+_This ordering definition is necessary to implement cache coherence protocols_
+_and forms the basis for the memory ordering model below._
+_Effectively, a PoC establishes a coherence order for a given memory location_
+_with respect to a set of agents._
+****
+
+For every memory location in a system, the _point of convergence of memory_, or 
+_PoC-memory_, is the PoC where all paths for a given memory location converge, 
+independent of all other characteristics that define a path.
+At the PoC-memory, all accesses to a memory location have been access ordered, 
+and the CMO instructions defined in this extension are guaranteed to operate on 
+a path up to the PoC-memory.
+
+*_FIXME:_* Define other standard PoCs?
+
+A system may define additional custom PoCs before the PoC-memory, and when such 
+a PoC is specified in a CMO instruction, the instruction _must_ operate on a 
+given path up to the custom PoC and may operate on the path up to the 
+PoC-memory.
+A CMO instruction is _not_ required, however, to operate on the path beyond a 
+custom PoC.
+
+****
+_The above definition allows an implementation to perform all operations to_
+_custom PoCs before the PoC-memory as if such operations were to the_
+_PoC-memory._
+****
+
+A CMO instruction operates on the caches accessed while traversing a given 
+path, and any number of caches may be accessed along a path up to the specified 
+PoC.
+On a path, private caches are accessed between a system agent and the first 
+PoC, while shared caches are accessed between PoCs.
+Memory accesses from CMO instructions access the caches on a path _directly_.
+
+Caches introduce multiple copies of cache blocks, and a system may implement a 
+_cache coherence_ mechanism in hardware to ensure that the copies in a set of 
 caches remain _coherent_ with respect to each other, i.e. the copies in the set 
-of caches appear to have the same data value, regardless of which cache is 
-accessed.
-The caches in such a set form a _coherence domain_ (or _domain_ for short), 
-which may consist of any number of caches, including an individual cache.
-The set of caches included in a given coherence domain is determined by the 
-same characteristics that determine the path.
+of caches appear to have the same data values, regardless of which cache in the 
+set is accessed.
+Such a set corresponds to a _coherence domain_ (or _domain_ for short), which 
+may consist of any number of caches, including an individual cache, and a given 
+coherence domain is defined by the same characteristics that determine the 
+path, specifically the physical address and memory attributes of a memory 
+access.
+Additionally, depending on the cache coherence mechanism, memory accesses from 
+CMO instructions _indirectly_ access the caches within a coherence domain that 
+are _not_ accessed directly.
+
+****
+_A hardware cache coherence mechanism may add additional cache states and may_
+_cause additional cache block state transitions._
+_The effects of a hardware cache coherence mechanism on cache block state are_
+_beyond the scope of this specification._
+****
 
 If two caches are in different coherence domains, the copies in those caches 
 are _non-coherent_ with respect to each other.
@@ -225,51 +284,27 @@ appear to have the same data values.
 Software may enforce coherence on non-coherent copies using CMO instructions.
 
 ****
-_A hardware cache coherence mechanism may add additional cache states and may_
-_cause additional cache block state transitions._
-_The effects of a hardware cache coherence mechanism on cache block state are_
-_beyond the scope of this specification._
-
 _The term_ coherent _implies a guarantee of coherence, while the term_
 non-coherent _implies only the lack of such a guarantee, not a guarantee of_
 _non-coherence._
 ****
 
-Conceptually, domains along a path are accessed in a serial manner, while the 
-caches within a domain are accessed in an _implementation-defined_ manner based 
-on the cache coherence protocol.
-A memory access may access a cache _directly_, as a result of traversing the 
-path to memory, or _indirectly_, as a result of branching off the path due to 
-the cache coherence protocol.
-The set of caches accessed indirectly within a coherence domain is a function 
-of the states of the caches in the domain and the memory attributes associated 
-with the memory access.
-
-Paths from different system agents to the same memory location may converge 
-within a domain, at which point the paths are the same from that domain to the 
-memory location.
-When paths converge within a domain, the memory accesses on those paths are 
-ordered by the domain and remain ordered with respect to each other until the 
-memory location is accessed.
-Once an order has been established, those memory accesses are considered to be 
-_domain ordered_ and cannot be reordered within the system.
 
 ****
-_This ordering definition is necessary to implement cache coherence protocols_
-_and forms the basis for the memory ordering model below._
-****
+Stuff being worked on:
+
+PoCs and coherence domains are related 
 
 
 
-Cache block management instruction specify hierarchy in terms of domains
+In particular, the memory attributes of a memory access define the coherence 
+domain.
 
-Cache block write/hint instructions specify hierarchy in terms of structure
 
 
-==== FooBar
+The PoC in a coherence domain closest to the PoC-memory is special.
 
-Domains define the sets of agents that communicate coherently without
-
+A PoC is not required to correspond to a cache.
 
 If two separate memory accesses to the same physical address access the same 
 set of caches, either directly or indirectly, those accesses are _symmetric_ 
@@ -278,76 +313,51 @@ different sets of caches, they are _asymmetric_ with respect to each other.
 
 Really, same domains -> symmetric; different domains -> asymmetric
 
-
-symmetric at the PoC if two paths accesse the same set of caches directly and indirectly
-asymmetric if not
+If two paths converge at the same PoC and the memory access
 
 
-Paths converge at a _point of convergence_, or _PoC_, which designates the 
-point at which a set of memory accesses to the same memory location is 
-logically ordered.
-Once ordered by a PoC, a memory access in the set cannot be reordered with 
-respect to other memory accesses in the set, and the set of memory accesses 
-shares the remainder of the path to the memory location.
 
-PoC establishes a coherence order.
+paths, convergence, domains overlay
 
-****
-_A PoC may be represented, for example, by a single physical entity, such as an 
-arbiter, or a distributed logical process, such as a cache coherence protocol, 
-as long as the order of memory accesses is preserved once established._
-****
+SW view: POCs define sets of agents that communicate coherently without SW help
+
+Coherent up to a PoC?
+
+direct caches on path, indirect caches above PoC in coherence domain
+
+PoC closest to memory in domain
 
 ****
-_The pertinent memory attributes are typically cacheability and coherence; 
-however, other memory attributes may affect the system behavior in such a way 
-that the set of memory accesses ordered by PoC changes._
-****
 
-This extension defines several PoCs. The fundamental PoC for a given physical 
-address is the _point of convergence for memory_, or _PoC-memory_, which is the 
-PoC where all paths for that physical address converge, independent of all 
-other characteristics that define a path.
-
-****
-_The PoC-memory conceptually represents the point at which memory accesses from 
-all system agents that can access a memory location via the same physical 
-address are ordered._
-_The architecture does not prohibit system agents from accessing a memory 
-location without passing through the PoC-memory, nor does the architecture 
-prohibit caches beyond the PoC-memory._
-_However, in such a system, software cannot expect the architectural cache 
-operations to have the desired effects with respect to those system agents or 
-caches._
-****
-
-****
-_Additional system topology beyond the PoC-memory may be specified in future 
-extensions._
-_For example, various points of persistence may be defined to support different 
-classes of storage._
-****
-
-*_FIXME:_* Define the relationship between PoCs and domains
-
-Each domain has a corresponding PoC
-
-*_FIXME:_* Other PoCs?
-
-*_FIXME:_* Direct access -- a memory access from a hart accesses a cache on the 
-path to memory; indirect access -- a memory access from a hart accesses a cache 
-via a coherence mechanism, e.g. a probe, in a coherence domain.
 
 *_FIXME:_* Domains can be mapped outward; within the frontier, outside the frontier
 
+****
+_This extension does not prohibit system agents from bypassing the PoC-memory_
+_to access a memory location, nor does the extension prohibit memory caches_
+_beyond the PoC-memory._
+_However, in such a system, software cannot expect the currently defined cache_
+_operations to have the desired effects with respect to those system agents or_
+_caches._
+
+_Additional system topology beyond the PoC-memory may be specified in future_
+_extensions._
+_For example, additional points of convergence may be defined to manage memory_
+_caches, or various points of persistence may be defined to support different_
+_classes of storage._
+****
 
 ==== FIXME: PMA Behaviors
 
-FIXME: Coherence and cacheability attribute...
+FIXME: Coherence and cacheability attributes...
 
 Ignore cacheability to enable changes in attribute
 
+Non-coherent implies that no caches are accessed indirectly.
+
 Non-coherence is not a guarantee
+
+
 
 === FIXME: Memory Ordering
 
@@ -398,7 +408,13 @@ between the invalidate and _i_, the load value is UNSPECIFIED (imp-def?)
 
 ==== Ordering Events
 
+Ordering event for CMO: access ordered at explicit PoC
 
+Ordering event for load: access ordered in the implicit domain
+
+Ordering event for store: access ordered in the implicit domain
+
+PPO specifies the order of the ordering events
 
 === FIXME: Discovery
 
@@ -960,8 +976,33 @@ _information for a cache block rather than the cache block itself._
 '''
 
 
-----
+****
 
+PoC Wording:
+
+Paths from different system agents to the same memory location may converge 
+within a domain, at which point the paths are the same from that domain to the 
+memory location.
+When paths converge within a domain, the memory accesses on those paths are 
+ordered by the domain and remain ordered with respect to each other until the 
+memory location is accessed.
+Once an order has been established, those memory accesses are considered to be 
+_domain ordered_ and cannot be reordered within the system.
+
+
+Paths converge at a _point of convergence_, or _PoC_, which designates the 
+point at which a set of memory accesses to the same memory location is 
+logically ordered.
+Once ordered by a PoC, a memory access in the set cannot be reordered with 
+respect to other memory accesses in the set, and the set of memory accesses 
+shares the remainder of the path to the memory location.
+
+The fundamental PoC for a given physical 
+address is the _point of convergence for memory_, or _PoC-memory_, which is the 
+PoC where all paths for that physical address converge, independent of all 
+other characteristics that define a path.
+
+Memory Ordering Wording:
 
 Cache management operations are ordered with respect to other load operations, store operations, and cache management operations as specified by RVWMO, subject to any additional constraints defined above.
 In particular, overlapping address orderings are preserved (with the additional constraints defined above), while a `FENCE` instruction may be used to order cache management operations with respect to operations to non-overlapping addresses.
@@ -970,10 +1011,10 @@ The other RVWMO ordering rules apply as well.
 For a cache block management instruction, the _effects_ of the resulting operation are ordered with respect to any other required operations.
 In other words, such a cache operation is considered to be ordered once the operation is performed with respect to the required system agents.
 
-****
+----
 _The existing `FENCE` instruction is sufficient to order the cache management operations in the base extension._
 _In future extensions, an additional fence instruction may be required to determine when certain cache management operations are complete._
-****
+----
 
 
 
@@ -1037,4 +1078,4 @@ access has write permission in the effective privilege mode:
 * `3`: Execution performs an invalidate operation [invalidate]
 
 |         |          |
-----
+****
