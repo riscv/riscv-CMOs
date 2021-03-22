@@ -684,7 +684,7 @@ execution of CMO instructions.
 
 ===== Determining Illegal Instruction Exceptions
 
-The descriptions for the `CBME` and `CBZE` bits in the `xcmocontrol` registers 
+The descriptions for the `CBME` and `CBWE` bits in the `xcmocontrol` registers 
 include a _privilege_mode_ parameter that corresponds to the privilege modes 
 controlled by a given CSR. Each CSR defines this parameter as follows:
 
