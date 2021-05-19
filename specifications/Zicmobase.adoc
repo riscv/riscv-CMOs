@@ -1,4 +1,4 @@
-= Zicmobase Extension, Version 0.1.1
+= Zicmobase Extension, Version 0.1.2
 :sectnums:
 :toc:
 
@@ -236,6 +236,21 @@ a path up to the PoC-memory.
 
 *_FIXME:_* Define other standard PoCs?
 
+****
+_This extension does not prohibit system agents from bypassing the PoC-memory_
+_to access a memory location, nor does the extension prohibit memory caches_
+_beyond the PoC-memory._
+_However, in such a system, software cannot expect the currently defined cache_
+_operations to have the desired effects with respect to those system agents or_
+_caches._
+
+_Additional system topology beyond the PoC-memory may be specified in future_
+_extensions._
+_For example, additional points of convergence may be defined to manage memory_
+_caches, or various points of persistence may be defined to support different_
+_classes of storage._
+****
+
 A system may define additional custom PoCs before the PoC-memory, and when such 
 a PoC is specified in a CMO instruction, the instruction _must_ operate on a 
 given path up to the custom PoC and may operate on the path up to the 
@@ -293,31 +308,6 @@ non-coherent _implies only the lack of such a guarantee, not a guarantee of_
 _non-coherence._
 ****
 
-Domains correspond to particular PoCs.
-A _PoC-domain_ (working title) is defined to be the PoC at which all paths that
-pass through any cache in the domain before the PoC converge.
-Systems may have any number of PoCs-domain visible to software via memory 
-attributes or as custom PoCs.
-In addition, a domain may be asymmetric with respect to the paths that converge
-at a PoC-domain.
-Specifically, a memory access on one path may indirectly access the caches on a
-second path, while a memory access on the second path may _not_ indirectly
-access the caches on the first.
-
-****
-_This extension does not prohibit system agents from bypassing the PoC-memory_
-_to access a memory location, nor does the extension prohibit memory caches_
-_beyond the PoC-memory._
-_However, in such a system, software cannot expect the currently defined cache_
-_operations to have the desired effects with respect to those system agents or_
-_caches._
-
-_Additional system topology beyond the PoC-memory may be specified in future_
-_extensions._
-_For example, additional points of convergence may be defined to manage memory_
-_caches, or various points of persistence may be defined to support different_
-_classes of storage._
-****
 
 ****
 Below are some properties/implications of the above definitions:
@@ -342,10 +332,23 @@ Below are some properties/implications of the above definitions:
 ****
 Random stuff being worked on:
 
+_PoCs-domain_
+
 memory accesses due to loads and stores can be ordered anywhere in a domain, but the
 ultimate point of ordering for the domain is the PoC-domain.
 memory accesses due to CMOs operate to a PoC-domain and guarantee the whole domain
 has been operated on
+
+Domains correspond to particular PoCs.
+A _PoC-domain_ (working title) is defined to be the PoC at which all paths that
+pass through any cache in the domain before the PoC converge.
+Systems may have any number of PoCs-domain visible to software via memory 
+attributes or as custom PoCs.
+In addition, a domain may be asymmetric with respect to the paths that converge
+at a PoC-domain.
+Specifically, a memory access on one path may indirectly access the caches on a
+second path, while a memory access on the second path may _not_ indirectly
+access the caches on the first.
 
 
 SW view: POCs define sets of agents that communicate coherently without SW help
@@ -368,7 +371,7 @@ FIXME: Coherence and cacheability attributes...
 
 Ignore cacheability to enable changes in attribute
 
-Non-coherent implies that no caches are accessed indirectly.
+Non-coherent implies that caches may not be accessed indirectly.
 
 
 === FIXME: Memory Ordering
@@ -425,7 +428,7 @@ could be produced by other agents. Maybe...?
 
 ==== Ordering Events
 
-Ordering event for CMO: access ordered at explicit PoC(-domain)
+Ordering event for CMO: access ordered at explicit PoC
 
 Ordering event for load: access ordered in the implicit domain
 
