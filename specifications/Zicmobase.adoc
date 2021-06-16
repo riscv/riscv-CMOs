@@ -1,4 +1,4 @@
-= Zicmobase Extension, Version 0.1.2
+= Zicmobase Extension, Version 0.2
 :sectnums:
 :toc:
 
@@ -589,6 +589,23 @@ should program the NAPOT range to equal the cache block size._
 
 == Formats
 
+=== Instructions
+
+For Zicbom and Zicboz:
+
+ inst[6:0]   - 0b0001111 (MISC-MEM)
+ inst[11:7]  - 0b00000 (rd - reserved)
+ inst[14:12] - 0b010 (new funct3 encoding)
+ inst[19:15] - rs1 (effective address)
+ inst[24:20] - 0b00000 (rs2 - reserved)
+ inst[31:25] - 0bxxxyyyy (funct7), where
+    xxx:  0b000 (reserved for future modifiers)
+    yyyy: 0b0000 - CBO.INVAL
+          0b0001 - CBO.CLEAN
+          0b0010 - CBO.FLUSH
+          0b0100 - CBO.ZERO
+          all others reserved
+
 === CSRs
 
 *_FIXME_*: How is this extension disabled?
@@ -601,11 +618,16 @@ Four CSRs control execution of CMO instructions:
 * `vscmocontrol`
 
 ****
-_The `scmocontrol` and `vscmocontrol` registers are both required to 
-distinguish CMO execution behavior when the effective privilege mode is U-mode 
-or VU-mode, respectively._
-_These registers are only present if the H-extension is implemented and 
-enabled._
+_The `scmocontrol` and `vscmocontrol` registers are both required to
+*distinguish CMO execution behavior when the effective privilege mode is U-mode
+*or VU-mode, respectively. These registers are only present if the H-extension
+*is implemented and  enabled._
+
+We need a separate vscmocontrol register to differentiate between the effective
+VU-mode behaviors and the effective U-mode behaviors in the scmocontrol when
+MPRV=1. So even though the hypervisor could swap out scmocontrol before
+returning to either VU/VS or U, M could arbitrarily perform effective VU or U
+accesses without letting the hypervisor know.
 ****
 
 Each `xcmocontrol` register has the following generic format:
