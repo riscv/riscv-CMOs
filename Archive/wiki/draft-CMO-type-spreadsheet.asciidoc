@@ -1,0 +1,8 @@
+=== CMO type spreadsheet
+
+A spreadsheet CMOs.xlsx presents the desired CMO types in a format
+more convenient than this asciidoc text.
+
+This spreadsheet is available on GitHub at https://github.com/riscv/riscv-CMOs/blob/master/CMOs.xlsx
+
+TBD: ensure that the latest version of the spreadsheet has been uploaded.  As of <2020-06-11 Thursday, June 11, WW24> the version online is dated April 30th.

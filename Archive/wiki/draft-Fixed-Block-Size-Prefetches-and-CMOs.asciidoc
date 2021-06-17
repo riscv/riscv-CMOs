@@ -1,0 +1,147 @@
+
+// # SUMMARY: Fixed Block Size Prefetches and CMOs
+
+
+// ## Fixed Block Size Prefetches
+
+Proposed name: PREFETCH.64B.R
+
+* encoding: ORI with RD=R0, i.e. M[rs1+offset12]
+  ** `imm12.rs1:5.110.rd=00000.0010011`
+* affects cache line containing virtual address M[rs1+offset12]
+* see *_Mnemonics and Names_* for a discussion of proposed mnemonics and names
+
+Proposed name: PREFETCH.64B.W [^mnemonics]
+
+* encoding: ANDI with RD=R0, i.e. M[rs1+offset12]
+  ** `imm12.rs1:5.110.rd=00000.0110011`
+* affects cache line containing virtual address M[rs1+offset12]
+* see *_Mnemonics and Names_* for a discussion of proposed mnemonics and names
+
+## OBSOLETE: Fixed Block Size Clean and Flush CMOs
+
+[NOTE]
+.Obsolete
+====
+Earlier drafts of this proposal contained fixed block size CMOs, e.g. cache flushes.
+Like the PREFETCHes, but without the full addressing mode to save instruction encoding space.
+These have been removed from the proposal, subsumed by the prefetch flavors of the variable address range CMO.VAR instructions.
+====
+
+
+
+
+// OBSOLETE: CMO.64B: Proposed name: CMO.64B.CLEAN.toL2
+// OBSOLETE: CMO.64B:
+// OBSOLETE: CMO.64B: * more descriptive name: D1-Clean-to-L2 64B
+// OBSOLETE: CMO.64B: * OR format with RD=R0, RS2=R0
+// OBSOLETE: CMO.64B:   ** funct7=0000000.rs2=00000.rs1:5.110.rd=00000.0110011
+// OBSOLETE: CMO.64B: * affects cache line containing virtual address M[rs1]
+// OBSOLETE: CMO.64B: * "clean"
+// OBSOLETE: CMO.64B:    ** write dirty back,
+// OBSOLETE: CMO.64B:    ** keep clean copy of all lines in cache, both originally dirty and clean
+// OBSOLETE: CMO.64B: * see *_Mnemonics and Names_* for a discussion of proposed mnemonics and names
+// OBSOLETE: CMO.64B:
+// OBSOLETE: CMO.64B: Proposed name: CMO.64B.FLUSH.toL2
+// OBSOLETE: CMO.64B:
+// OBSOLETE: CMO.64B: * more descriptive name: D1-Flush-to-L2 64B
+// OBSOLETE: CMO.64B: * encoding: AND format with RD=R0, RS2=R0
+// OBSOLETE: CMO.64B:   ** funct7=0000000.rs2=00000.rs1:5.111.rd=00000.0110011
+// OBSOLETE: CMO.64B: * affects cache line containing virtual address M[rs1]
+// OBSOLETE: CMO.64B: * "flush"
+// OBSOLETE: CMO.64B:   ** write dirty back,
+// OBSOLETE: CMO.64B:   ** invalidate all lines in cache, both originally dirty and clean
+// OBSOLETE: CMO.64B: * see *_Mnemonics and Names_* for a discussion of proposed mnemonics and names
+// OBSOLETE: CMO.64B:
+// OBSOLETE: CMO.64B:
+// OBSOLETE: CMO.64B: The more descriptive names "D1-Clean-to-L2" and "D1-Flush-to-L2" are more descriptive of the implementation & intent on a typical system at the time this is being written. The proposed names such as CMO.64B.FLUSH.toL2 are more generic, and may apply when the cache hierarchy is different. (Obviously "toL2" is microarchitecture specific, and should be replaced by something like "SHARED-LEVEL".) See *_Mnemonics and Names_* for a discussion of proposed mnemonics and names.
+// OBSOLETE: CMO.64B:
+// OBSOLETE: CMO.64B:
+// OBSOLETE: CMO.64B: The intent is that dirty data be flushed to some cache level common or shared between all or most processors of interest. E.g. if all processors share the L2, flush their L1s to the L2. If all processors share and L3, then flush their L1s and L2s to the L3. And so on. Obviously, exactly what level flushes done to depends on the cache hierarchy and platform.
+// OBSOLETE: CMO.64B:
+// OBSOLETE: CMO.64B: (More precise control is found in the variable address range CMOs. We do not want to spend all of the increasingly scarce instruction encodings to encode all hypothetically desirable prefetches and CMOs in the instruction format that touches Mem[reg+imm12]. Some other instructions use register operands to allow more prefetch and CMO types.)
+// OBSOLETE: CMO.64B:
+
+## DETAILS
+
+* Page Fault: NOT taken for PREFETCH
+  ** The intent is that loops may access data right up to a page boundary beyond which they are not allowed, and may contain prefetches that are an arbitrary stride past the current ordinary memory access. Therefore, such address range prefetches should be ignored.
+    *** => Not useful for initiating virtual memory swaps from disk, copy-on-write, and prefetches in some "Two Level Memory" systems, e.g. with NVRAM, etc., which may involve OS page table management in a deferred manner. (TBD: link to paper (CW))
+
+// OBSOLETE: * Page Fault: NOT taken for CMO.CLEAN/FLUSH
+// OBSOLETE:   ** again, the intent is that the CMOs defined on this page may be treated as NOPs or hints by an implementation. I.e. they are for performance only.
+// OBSOLETE:   ** Note that this implies that these CMOs /may/ not be suitable for cache flushing related to software coherence or persistence.
+// OBSOLETE:     *** Some OSes treat the hardware page tables as a cache for a larger data structure that translates virtual to physical memory address translation
+// OBSOLETE:     *** This means that physical addresses in the cache may be present even the translations from their virtual address those physical addresses are no longer present in the page tables. In such a situation a true guaranteed flush might require taking page faults.
+// OBSOLETE:     *** Obviously this is OS specific. Software with knowledge of the OS behavior may use these instructions for guaranteed flushes. However, it is not possible for the instruction set architecture to make this guarantee.
+
+
+
+* Debug exceptions, e.g. data address breakpoints: YES taken.
+
+Note that page table protections are sometimes used as part of a debugging strategy. Therefore, ignoring page table faults is inconsistent with permitting debug exceptions
+
+
+* ECC and other machine check exceptions: taken?
+  ** In the interest of finding bugs earlier.
+  ** Although this is somewhat incompatible with allowing these prefetches to become NOPs
+
+NOTE:
+
+[NOTE]
+.Rationale: Addressing Modes
+====
+Want full addressing mode for fixed block size prefetches, `Reg+Offset`, so that compiler can just add a prefetch stride to the offset, does not need to allocate extra registers for the prefetch address
+
+// CMO clean/flushes with full Offset addressing mode would be nice to have, but consumes encoding space.
+====
+
+[NOTE]
+.Rationale:Fixed minimum block size - NOT cache line size
+====
+These instructions are associated with a fixed block
+size - actually a minimum fixed block size. NOT necessarily the microarchitecture
+specific cache line size.
+
+Currently the fixed block size is only defined to be 64 bytes.
+Instruction encodings are reserves for other block sizes, e.g. 256
+bytes. However, there is unlikely to be room to support all possible
+cache line sizes in these instructions.
+
+The fixed block size of these instructions is NOT necessarily a cache line
+size. The intention is to hide the microarchitecture cache line size,
+which may even be different on different cache levels in the same
+machine, while allowing reasonably good performance across machines
+with different cache line sizes.
+
+The fixed minimum block size (FSZ) is essentially a contract that
+tells software that it does not need to prefetch more often than that
+size.  Implementations are permitted to "round up" FSZ: e.g. on a
+machine with 256 byte cache lines, each PREFETCH.64B.[RW]
+// and CMO.64B.{CLEAN,FLUSH} may apply to an entire 256 byte cache line.
+Conversely, on a machine with 32 byte cache lines, it is
+recommended that implementations of these instructions to address A
+apply similar operations to cache lines containing address A and
+A+32. "It is recommended" because it is permissible for all of these
+operations defined on this page to be ignored, treated as NOPs or
+hints.
+
+The intent of the fixed minimum block size is to set an upper bound on
+prefetch instruction overhead. E.g. if standing an array of 32 byte
+items `LOOP A[i] ENDLOOP`, one might prefetch at every iteration of
+the loop `LOOP A[i]; prefetch A[i+delta] ENDLOOP`. However, prefetch
+instruction overhead often outweighs the memory latency benefit of
+prefetch instructions. If one knows that the cache line size is 256
+bytes, i.e. once every 256/4=64 iterations of the loop, one might
+unroll the loop 64 times `LOOP A[i+0]; ... A[i+63]; prefetch
+A[i+63+delta] ENDLOOP`, thereby reducing the prefetch instruction
+overhead to 1/64.  But if the cache line size is 64 bytes you only
+need to enroll 64/4=16 times: `LOOP A[i+0]; ... A[i+15]; prefetch
+A[i+15+delta] ENDLOOP`.  The prefetches are relatively more important,
+but the overhead of unrolling code to exactly match the line size is
+greatly reduced.
+
+_The fixed minimum block size is an indication that the user does not
+need to place prefetches any closer together to get the benefit of
+prefetching all of a contiguous memory region._
+====

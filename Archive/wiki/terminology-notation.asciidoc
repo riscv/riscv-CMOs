@@ -1,0 +1,62 @@
+
+[appendix]
+== Terminology
+
+TBD:  automatically generate from  marks in line as in LaTeX (AsciiDoc is probably incapable).
+
+CMO::
+Cache Management Operation.  A superset of prefetches, post-stores,  and other operations.
+
+Post-Store::
+A cute Berkeleyism for CMOs that push data from a near cache to a further cache,
+contrasting with Pre-Fetch.
+
+
+Pre-Fetch, PREFETCH::
+Move data  within cache hierarchy,  typically from  further out (e.g. memory) to  closer in. (Possibly from one processor's cache to another.)
+
+Ri5::
+shorthand for RISC-V. TBD change from Golew specific Ri5 to more standard RV
+
+RV::standard  shorthand for RISC-V (?).
+
+
+
+[appendix]
+== Notation
+
+=== Encoding Bitstring Notation
+
+See https://github.com/AndyGlew/comp-arch.net/wiki/Instruction-Encoding-Notation
+
+This document uses notation such as this below for  instruction encoding bit strings:
+
+PREFETCH.64B.R: `imm12.rs1:5.110.rd=00000.0010011`, e.g. ORI with RD=x0
+
+In these bitstrings
+
+* 0 and 1  respond to bit values
+
+* fields are specified by rs2:5, rd=00000, etc
+  * i.e. fieldname:width
+  * e.g. fieldname=value (width implied)
+
+* punctuation  is used to improve readability, such as period ".", underscore "_", and comma ","
+
+Bit positions are numbered with bit 0 on the right, in the usual  RISC-V manner.
+
+Elsewhere in the RISC-V toolchain a similar notation is used,
+with additions such as allowing blanks to separate fields,
+and allowing fields to be specified out of order  by specifying bit positions such as
+`rd=5..9`
+
+AW: https://github.com/riscv/riscv-opcodes is where the current instruction encoding metadata lives.
+See comment at the top of https://github.com/riscv/riscv-opcodes/blob/master/opcodes-rvv
+for description of notation.
+
+
+TBD: unify these notations.
+
+TBD: generate pretty human readable tables ("opcode maps") from these notations.
+
+(The RISC-V toolchain already generates "tables" which are essentially lists of encodings.  By "pretty" I mean the sort of table that looks like a hierarchy of Karnaugh maps, as is traditional.  Other tools also generate nice diagrams of per-instruction encodings and fields.)

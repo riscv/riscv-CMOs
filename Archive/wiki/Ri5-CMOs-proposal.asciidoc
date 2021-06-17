@@ -1,0 +1,241 @@
+:stylesheet: skins/asciidoc-classic-ag.css
+= Ri5 CMOs proposal: Cache Management Operations
+Andy Glew <andy.glew@sifive.com>
+v0.6, 2020-08-12: moved to official repo+wiki https://github.com/riscv/riscv-CMOs
+:toc: macro
+:toclevels: 9
+:sectnumlevels: 9
+:sectnums:
+
+
+{localdatetime} - When this draft was generated. Not necessarily modified.
+
+
+See https://github.com/riscv/riscv-CMOs/wiki/generated-HTML-and-PDF-for-CMOs-proposal
+for pointers to  AsciiDoc source, and  generated HTML and PDF, for a version of document.
+
+See <<_techpubs_information>> section below for more details.
+ifdef::env-github[]
+Or, in this wiki/AsciiDoc page: link:techpubs-info[],
+since the AsciiDoc cross-reference <<_techpubs_information>>  does not render when viewed on the web.
+endif::[]
+
+
+
+:!sectnums:
+
+== About this document
+
+This document is a proposal for cache management operations for RISC-V.
+
+NOTE: Rationale and other background is distinguished by NOTE sections such as this.
+See <<Rationale using AsciiDoctor NOTE admonition>>.
+
+=== Document History Highlights and Biggest Known Issues
+
+* v0.6, August 12, 2020:
+  ** Moved to, first versions generated, on official GitHub repo+wiki
+     *** https://github.com/riscv/riscv-CMOs, https://github.com/riscv/riscv-CMOs/wiki
+  ** TBD/WIP: review comments
+     *** trying to keep migration separate from twchnical edits
+  ** Spreadsheet of actual operations is at https://github.com/riscv/riscv-CMOs/blob/master/CMOs-proposal-spreadsheet.xlsx
+
+Versions prepared in personal repo+wiki https://github.com/AndyGlew/Ri5-stuff
+
+* History NOT propagated to official repo+wiki <== copied files
+
+* v0.5, July 16, 2020:
+  ** WIP: edits after reviews received, after sending links to several Ri5 working groups (security, virtual memory)
+  ** WIP: moving out of Glew personal GitHub to official RISC-V GitHub
+     *** links may break as move is accomplished.
+  ** Spreadsheet of actual operations is at https://github.com/AndyGlew/Ri5-stuff/blob/master/CMOs-proposal-spreadsheet.xlsx
+     *** TBD: move along with others
+     *** TBD: reduce operation count
+  ** ISSUE: CMO flushes when cacheability is changing (via PMAs, possibly PTEs)
+
+* v0.4 June 16, 2020:
+  ** WIP edits after June 11 review
+  ** TIMING_FLUSH removed, merged into loopful CMO.UR
+  ** CMO.UR index start/ends with 0
+  ** many spelling/typo errors (but by no means all).
+  ** Started distinguishing Rationale and discussion from normative specification using AsciiDoc NOTE admonition blocks
+  ** NOT FINISHED
+    *** COMPLETION_FENCE merged with existing RISC-V FENCE
+    *** .<cmo_specifier> definition
+
+* v.3. June 11, 2020:
+  ** Fixed Block Size CMOs removed
+  ** .<cmo_specifier> => .<cmo_operation>.<which_cache>
+  ** TIMING_FLUSH
+  ** COMPLETION_FENCE
+
+
+
+include::======================================TOC-spacer.asciidoc[]
+
+toc::[]
+
+
+// =========================================================
+
+:sectnums:
+
+== CMO instruction formats and CMO operation types
+
+There are 3 _formats_ of CMO instructions:
+
+* <<Fixed Block Size Prefetches (PREFETCH.*)>>
+// DEPRECATED: * <<Fixed Block Size CMOs (CMO.FSZ.*)>>
+operating on 64B naturally aligned regions of memory
+* <<Variable Address Range CMOs (CMO.VAR)>>
+operating on arbitrary address ranges
+* <<Microarchitecture Structure Range CMOs (CMO.UR)>>
+supporting whole cache operations
+operating on "cache entry numbers" or "indexes"
+which generalize and abstract cache set + way
+
+There are _many_ types of CMO operations,
+which are formed by the combination of
+
+* which caches the operation applies to (and/or other parts of the memory system)
+* what operation is actually performed (e.g. invalidate, flush dirty data)
+* other aspects, such as invalidating related prefetchers and predictors
+
+The CMO types are represented in the assembly syntax as the .<cmo_specifier> field.
+They are encoded in the instruction encoding as described below.
+
+
+
+// include::======================================TOC-spacer.asciidoc[]
+
+include::draft-CMO-instruction-formats.asciidoc[]
+
+include::======================================TOC-spacer.asciidoc[]
+
+== Fixed Block Size PREFETCHes
+
+:leveloffset: +1
+
+include::draft-Fixed-Block-Size-Prefetches-and-CMOs.asciidoc[]
+
+:leveloffset: -1
+
+
+include::======================================TOC-spacer.asciidoc[]
+
+== Variable Address Range CMOs
+
+:leveloffset: +1
+
+include::draft-Variable-Address-Range-CMOs.asciidoc[]
+
+:leveloffset: -1
+
+include::======================================TOC-spacer.asciidoc[]
+
+== Microarchitecture Structure Range CMOs
+
+:leveloffset: +1
+
+include::draft-Microarchitecture-Structure-Range-CMOs.asciidoc[]
+
+:leveloffset: -1
+
+
+include::======================================TOC-spacer.asciidoc[]
+
+
+== CMO operation types: .<cmo_specifier>
+
+TBD: include spreadsheet of encodings?
+
+In addition to the different CMO instruction formats such as CMO.VAR and CMO.UR
+discussed above
+there are _many_ types of CMO operations.
+The CMO types are represented in the assembly syntax as the .<cmo_specifier> field.
+They are encoded in the instruction encoding in the Funct7 field of the instruction encoding,
+in conjunction with the lowest numbered bit of Funct3, bit 11 of the instruction encoding.
+
+
+These instruction types are formed by the the combination of
+
+* which caches the operation applies to (and/or other parts of the memory system) - .<cmo_specifier>.<which_cache>
+* what operation is actually performed (e.g. invalidate, flush dirty data) - .<cmo_specifier>.<cmo_operation>
+* other aspects, such as invalidating related prefetchers and predictors .<cmo_specifier>.<cmo_other>
+
+The subcomponents .<which_cache>, .<cmo_operation> and .<cmo_other> are NOT orthogonal bitfields of the .<cmo_specifier> bitset formed by Funct7 and Funct3.0/11.
+Nevertheless, it is convenient to use the .<cmo_specifier>.<property> notation, to describe these subcomponent properties that are computed from irregular encodings.
+
+[NOTE]
+.CSR bitfields would be less tightly encoded than instruction bitfields
+====
+.<cmo_specifier> might be specified quite simply in a CSR with 64 bits as follows;
+
+* standard or implementation dependent: 1 bit
+* CMO operation: 5 bits
+  ** e.g. FLUSH, CLEAN, DISCARD, PREFETCH.W/R, ...
+  ** with room for innovation
+* From domain: 5 bits
+* To domain: 5 bits
+* Security: 1 bit - flush predictors and otheer timi8ng channel related state
+* Mandatory/Advisory: 1 bit - HW is permitted to ignore, or not
+
+This encoding occupies 18 bits, much more than the 128-256 reasonable to place in an instruction encoding.
+
+Such a specification has encodings reserved for future instruction extensions.
+
+The biggest consumker of bits, however, are the from-domains and to-domains.
+
+E.g. for third party remote cache operations: hart1 performing a CMO that prefetches data from hardt2's L4 cache and moves it to hart's L2 cache.
+Even 5 bits is conservative, allowing only 32 distinct caches.
+
+E.g. for prefetch instructions that fetch into level N, bit do not prefetch past level M, since the interconnect past that level is saturated.
+
+However, since this proposal places the .<cmo_specifier> in the instruction encoding, the CMO types must be restricted and more tightly encoded.
+
+====
+
+include::draft-actual-CMO-operations.asciidoc[]
+
+include::draft-CMO-domains-and-levels.asciidoc[]
+
+include::draft-CMO-type-spreadsheet.asciidoc[]
+
+
+:leveloffset: -1
+include::draft-microarchitecture-timing-state-flushes.asciidoc[]
+:leveloffset: +1
+
+
+
+
+include::======================================TOC-spacer.asciidoc[]
+
+== Considerations common to CMO instruction formats
+
+include::SourceDest-to-support-Exception-Transparency.asciidoc[]
+
+
+
+
+=== Privilege for CMOs
+
+:leveloffset: +3
+include::draft-Privilege-for-CMOs.asciidoc[]
+:leveloffset: -3
+
+
+include::======================================TOC-spacer.asciidoc[]
+
+:leveloffset: +1
+include::draft-CMO-issues.asciidoc[]
+:leveloffset: -1
+
+
+include::======================================TOC-spacer.asciidoc[]
+
+include::terminology+notation.asciidoc[]
+
+include::======================================TOC-spacer.asciidoc[]
+
+include::techpubs-info.asciidoc[]

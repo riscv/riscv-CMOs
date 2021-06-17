@@ -1,0 +1,156 @@
+
+# SUMMARY: Privilege for CMOs and Prefetches
+
+Each of the prefetches and CMOs,
+including the fixed block size prefetches PREFETCH.64B.*
+and CMOs CMO.64B.*,
+and the address range CMOs CMO.VAR.*
+and cache index CMOs CMO.UR.*
+are mapped to a number 0..Ncmo-1, where Ncmo is the Number of CMO instruction  encodings.
+
+(Note:  the encodings do not necessarily have a contiguous field that corresponds to these values.)
+
+Several CSRs link:CMO-Privilege[] contains Ncmo 2-bit fields where bitfield CMO_Privilege.2b[J] indicates the privilege required to perform the corresponding CMO operation J.
+More than one CSR is required, since there are more than 64/2=32 different CMO flavors, each of which has a separate 2-bit delegation field.
+E.g. if tyeere are 256 CMOs => 512 2-bit fields, 8 64-bit delegation CSRs.
+
+TBD: see elsewhere for exactly how many CMOs are provided.
+
+The 2-bit fields are encoded as follows:
+
+* 00 =>  disabled.
+* 01 => traps to M mode
+  ** TBD: exception info (cause, address)
+* 10 => reserved
+* 11 => can execute in any mode, including user mode
+
+## Disabling CMOs - almost but not quite a NOP
+
+The disabled behavior for CMO.VAR is as follows:
+
+CMO_Privilege.2[J] => CMO.#J
+
+   * the  instruction does not actually perform any cache maintenance operation.
+   * but it returns a value such that the *_canonical range CMO loop_* exits
+       * CMO.VAR rd:next_addr, rs1=rd:start_addr, rs2:stop_addr
+          * sets RD to the  value in RS2, stop_addr
+       * CMO.UR rd:next_entry, rs1:start_entry
+          * sets RD to 0,  the exit condition
+
+[NOTE]
+====
+I.e. CMO.VAR may _disable_, i.e. not perform, any cache management operation, but must still write a value to RD guaranteeing that the surrounding software loop wuill terminate.
+
+Similarly, CMO.UR cannot be a NOP, since a user violating the rule of starting with RD/RS1=0 would result in the loop not terminating,
+which would be a virtualization hole.
+====
+
+
+[NOTE]
+.TBD:
+====
+Q: how should we arrange to permit the OS to perform certain CMOs, while allowing some CMOs to be executed by user mode, and otyhers to be implemented by hypervisor or M-mode?
+Should we provided separate CMO-Privilege CSR sets for each privilege level?  (As is being proposed for cerrtain other RISC-V extensions, such as Pointer Tagging.)
+
+A: not currently proposed. M-mode can emulate delegation if this is necessary.   At least the cost of bouncing through M-mode will be amortized because of the range nature of the CMOs.
+====
+
+## Context Switch
+
+System software such as an operating system may provide the same values of the CMO_Privilege CSRs to all processes.
+If so, no context switch of the CMO-Privilege CSRs is required.
+
+However, if the OS provides different values to different processes, then the CMO-Privilege CSRs must be context switched.
+
+## Unimplemented and Cross Wired CMOs
+
+Although there may be as many as 256 CMOs architected, an implementation need not build all of them.
+
+An implementation may leave some CMOs unimplemented. If so, then the CMO-Privilege field for those CMOs is hardwired to 00, corresponding to CMO disabled.
+Such fields are WARL, any write value permitted, but only the disabled value 0 is read.
+This can be used to discover which CMOs are implemented.
+(Not which cache levels are implemented - that must be discovered using some other mechanism, not defined here.)
+
+[NOTE]
+.TBD: CMO Discovery
+====
+Q: should it be possible for user code to discover which CMOs are implemented? That would require the CMO-Privilege CSRs to be readable but not writeable from user mode.
+But that would be a security hole, so would require a delegation field to control which privilege levels can read (and write?) the CMO-Privilege CSRs.
+====
+
+Certain CMOs may be equivalent.
+
+For example, certain of the "abstract"
+domains and levels of the memory hierarchy expressed by the
+.<cmo_specifier>.<which_cache> field may be identical in some
+implementatuions but not others. E.g. the point of coherence for instructions and data, POC(I,D) (called the Point Of Unification in ARM terminology), may also be the Point of (Inner) Coherence for all harts.
+E.g. there all DRAM may be battery backed up.
+E.g. there may be a single level of coherence for both non-coherent I/O and processors - typically this is also DRAM, although it may be a cache level if I/O injection is supported.
+
+Similarly, certain abstract CMOs may be equivalent.  E.g. ona system with writethrough caches, CLEAN and FLUSH may be treated equivalently.
+
+The CMO delegation fields for equivalent CMOs _must_  be cross wired, so that writes in one position appear in all equivalent positions.
+
+[NOTE]
+.TBD
+====
+Q: should there be a discovery mechanism for equivalent CMOs?  A: strictly speaking not needed, since can determine by a test pattern. However, that can be expensive.
+
+====
+
+
+[NOTE]
+.Rationale: Privilege and Delegation for CMOs and Prefetches
+====
+
+Requirement:  in some CPU implementations all or some CMOs *must* be
+trapped to M-mode and emulated.
+
+E.g. *_CMOs involving idiosyncratic external caches and devices_*,  devices that use MMIOs or CSRs  to perform CMOs,  and which are not (yet?)  directly connected to whatever.
+
+Requirement:  in some platform configurations some CMOs may *optionally* be trapped to M-mode and emulated.
+
+Requirement: it  is highly desirable to  be able to perform CMOs in user mode.
+
+NOTE: E.g. for performance. But also for security,  persistence,   since everywhere the *_Principle of Least Privilege_*   should apply:  e.g.  the cache management may be performed by a privileged user process, i.e. a process that is part of the operating system but which is running at reduced privilege.   In  such a system the operating system or hypervisor may choose to context switch the CSR_Privilege CSR, or  bitfields therein.
+
+Requirement:  even though it is highly desirable to be able to perform CMOs in user mode, in some situations allowing arbitrary user mode code to perform CMOs is a security vulnerability.
+
+NOTE: Vulnerability possibilities include:  information leaks, denial of service, and facilitating RowHammer attacks.
+
+Requirement: Many CMOs  should be permitted to user code, e.g. flush dirty data,  since they do nothing that  user code cannot itself do  using ordinary load and store instructions.   Such CMOs are typically advisory or performance related.   Note that doing this using ordinary load and store instructions might require detailed microarchitecture knowledge,  or might be unreliable in the presence of speculation that can affect things like LRU bits.
+
+Requirement: some CMOs should *not*  be permitted to user code. E.g. discard or forget  dirty data without writing it back. This is  a security vulnerability in most situations. (But not all -  although the situations in which it is not a security vulnerability are quite rare, e.g. certain varieties of supercomputers, although possibly also privileged software,  parts of the OS, running in user mode.)
+
+Requirement:  some CMOs may usefully be disabled.
+
+* Typically performance related CMOs, such as flushing to a shared cache level, or prefetching using the range CMOs.VAR.*. Software is notorious for thinking that it knows the best thing to do,  incorrectly.
+* Also  possibly software based on assumptions  that do not apply to the current system
+   *  e.g. system software may be written so that it can work with incoherent MMIO
+      but may be running on a system that has coherent MMIO
+   *  e.g.  persistence software written so that it can work with limited nonvolatile storage
+       running on a system where all memory is nonvolatile
+
+Requirement: Sometimes there needs to be a mapping between  the CMO that a user wants and the CMOs that hardware provides,  where the mapping is not known to CPU hardware,  not known to user code, but depends on the operating system and/or runtime, and might <i>dynamically</i> depend on the operating system and/or runtime.
+
+* e.g. For performance related CMOs, the user may only know that she wants to flush whatever caches are smaller than a particular size like 32K.  The user does not know which caches those  are on a particular system.
+* e.g. in software coherence all dirty data written by the sending process P_producer  may need to be flushed to a shared cache level so that it can be read by the consuming process P_consumer
+  *  consider if the sending process P_producer is part of a HW coherent  cache coherence domain,  but the receiving process P_consumer is  part of a different such domain
+     *  if the hardware cache  coherence domain  permits cache-to-cache  migration of dirty data, then all  caches in that  dirty domain  be flushed.
+     *  however,  if the hardware cache coherence domain does NOT permit cache-to-cache migration, then
+         *  if the system software  performs thread or process migration between CPUs that do not share caches
+             * without cache flushes => THEN  this SW dirty domain must be flushed
+             *  but if the system software performs cache flushes  on thread migration,
+                => THEN only the local processor cache need be flushed.
+         *  if the system software does not perform thread or process migration,  then only the local processor cache be flushed.
+            Other processor caches in the HW clean coherence domain do not need to be flushed.
+
+Optionally trapping  such CMOs allows the system or runtime software to choose the most appropriate  hardware CMO for the users' need.
+
+*I.e. the mapping is done by SW in the trap handler*
+
+====
+
+
+
+//  LocalWords:  encodings

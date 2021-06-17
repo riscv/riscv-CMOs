@@ -1,0 +1,464 @@
+
+// = Microarchitecture Structure Range CMOs
+
+Some situations require cache management operations that are NOT associated with a single address or an address range.
+
+E.g. if an entire cache needs to be invalidated, it is inefficient to iterate over every possible address that might be in the cache.
+
+See (man, I hate asciidoc links - [wiki links] are much easier.) 
+
+include::CBO.UX-vs-CMO.ALL-vs-CMO.UR.asciidoc[]
+
+for a detailed discussion  of design alternatives. 
+
+Briefly:
+
+Some traditional RISC ISAs instructions that invalidate by (set,way).
+[[if bound to an instruction]]  we call this CBO.UX.?? -- CBO  standing for "Cache Block Operation", UX standing for " microarchitecture index" e.g. (set,way), ?? being  other fields such as  the actual operation (CLEAN, DISCARD, INVALIDATE, INVALIDATE-S), and cache(s) involved.
+
+Problems with CBO.UX include:
+
+* exposing microarchitecture details to code that might otherwise be portable
+
+* inability to take advantage of hardware optimizations like bulk invalidates and state machines
+
+
+Many machines have FSMs that iterate over  the entire cache specified, and/or bulk invalidates  that "instantaneously"  invalidate a cache for some operations and/or some entries. [[If bound to an instruction]]  we call this CMO.ALL.$id.  
+
+Problems with CMO.ALL include
+
+*  interruptability/restartability with partial progress
+**  frequently CMO.ALL  implementations are not interruptible.
+***  This is not acceptable for many systems, especially real-time.
+**  if interruptible,  issues with restartability
+***  CMO.ALL  can be made restart with partial progress if there is state like a CSR from which it resumes on return from an interrupt.
+****  but we dislike adding new state
+***  or, CMO.ALL  may be interruptible but may have to resume from the beginning on return from interrupt
+****   forward progress problems =>  highly undesirable
+
+
+This proposal defines a CMO.UR  instruction in such a way that allows <<possible_implementations_ranging_from_cache_line_at_a_time_to_full_cache>>,
+with a loop such as that below:
+
+include::microarchitecture-range-loop.asciidoc[]
+
+== SUMMARY: Microarchitecture Structure Range CMOs
+
+=== Instruction encoding that supports all of XMOUR, CMO.ALL, and CBO.UX
+
+Assuming that we have a 3 register  encoding XXX_rd,rs2,rs1 ( although it turns out that we may only need two registers)
+
+*CMO.UR* rd==rs1 
+
+* used in a loop to iterate over a range or sequence of  cache entry numbers or indexes.   the range starting at zero and ending at zero is the entire cache.
+   **  RS1 = etart index. RS1 == X0 when starting to invalidate the cache. RS1  is some opaque value if interrupted.
+   ** RD =  index of next cache line that has not yet been processed. RD=0 =>  end of whole cache CMO
+* rd == rs1  is required  to provide a source/dest register that can be used to provide interruptability/restartability with partial progress
+*  implementations ranging from cache line at a time  through FSM entire cache through instantaneous clearing of valid bits.
+*  unused field  RS2==X0
+
+*CBO.UX* rs1
+
+*  operates upon only one cache entry, specified by RS1
+*  no return value
+*  unused fields RD==RS2==X0 
+
+*CMO.ALL*
+
+*  operates on the entire cache
+*  GLEW RECOMMENDATION: we should not provide this CMO.ALL, instead providing only CMO.UR and possibly CBO.UX
+
+'''
+
+=== *CMO.UR* - details
+
+Proposed name: CMO.UR.<cmo_specifier>
+
+Encoding: R-format
+
+* 2 registers: RD, RS1
+ ** abbreviated CMO.UR RD==RS1
+ ** R format actually has three registers: unused register RS2 is required to be zero
+ ** Register numbers in RD and RS1 are required to be the same
+  *** Why?: restartability
+  *** If the register numbers in RD and RS1 are not the same an illegal instruction exception is raised
+  (unless such encodings have been reused for other instructions in the future).
+  *** The term RD/RS1 will refer to this register number
+
+Assembly Syntax:
+
+* *CMO.UR*.<cmo_specifier> rd,rs1,x0
+
+But, since register numbers in RD and RS1 are required to be the same, and RS2 is required X0, assemblers are encouraged to provide the single register operand version
+
+* *CMO.UR*.<cmo_specifier> rd_and_rs1
+
+Operands:
+
+* Input:
+  ** RS1 (RD/RS1) contains `start_entry` or `index`, the *_microarchitecture entry number_* for the specified cache at which the CMO will start
+   ***  think of this as (set,way) -  starting from zero and ending at zero is a trick. 
+    **** See [[Why CMO.UR index range sequence  starts and ends at zero]]. 
+   *** RS1 = zero is the first entry
+ ** type of operation and caches to which it is applied
+  *** .*_<cmo_specifier>_*: i.e. specified by the encoding of the particular CMO.UR instruction
+* Output
+ ** RD (RSD/RS1) contains `stop_entry`, the microarchitecture entry number at which the CMO operation stopped
+  *** if RD is negative the operation has completed
+   **** IF RD=0 the operation completed successfully
+   **** Negative values of RD are reserved
+
+
+This instruction family is *_restartable after partial completion_*. E.g. on an interrupt or exceptionthe output register RD is to the microarchitecture entry number where the exception was incurred.
+Since the instruction is *_source/dest_*, with the register numbers in RD and RS1 required to be the same, returning from the exception to the CMO.UR instruction will pick up execution where it left off.
+
+Similarly, implementations may only process part of the range specified by microarchitecture entry numbers [0,num_entries),
+e.g. only the 1st cache line, setting RD/RS1 to an address _within_ the next cache line.
+Software using this instruction is required to wrap it in a loop to process the entire range.
+
+The .<cmo_specifier> derived from the instruction encoding (not a general-purpose register operand) specifies operations such as
+* CMO operation
+** CLEAN (write back dirty data, leaving clean data in cache)
+** FLUSH (writeback dirty data, leaving invalid data in cache)
+and other operations, as well as the caches involved. See *_CMO (Cache Management Operation) Types_*.
+(TBD: I expect that one or more of the .<cmo_specifier> will be something like a number identifying a group of CSRs loaded with an extended CMO type specification.)
+
+In assembly code certain CMO specifiers will be hardlined, and others may be indicated by the group number:
+
+* CMO.UR.CLEAN
+* CMO.UR.FLUSH
+* CMO.UR.0
+* CMO.UR.1
+
+[discrete]
+
+==== Loops to support cacheline at a time implementations - CMO.UR
+
+include::microarchitecture-range-loop.asciidoc[]
+
+'''
+
+== CMO.UR discussion, rationale
+ this is nonnormative text.
+
+TBD:  make into AsciiDoc "notes" -  RISC-V standard way to indicate rationale, and separate normative from nonnormative text.
+
+=== CBO.UX vs CMO.ALL vs CMO.UR
+
+include::CBO.UX-vs-CMO.ALL-vs-CMO.UR.asciidoc[]
+
+=== CMO.UR Microarchitecture Entry Range - countdown
+
+When used in a loop such as `X11:= 0; LOOP X11 CMO.UR X11; WHILE X11 > 0`
+the cache management operation is applied to the entire cache specified by the .<cmo-type> field of the CMO.UR instruction.
+
+For the purposes of this instruction, the CMO.UR index register operand assumes
+a sequence of positive numbers beginning at 0 and terminating at zero.
+The subsequence between the start and end
+are index values are in the range 1..XLEN/2,
+and have no repetitions.
+This subsequence may be empty - e.g. if the operation is "instantaneous", and requires no scanning,
+or if the specified caches and other microarchitecture data structures do not exist.
+
+The sequence terminates at zero as currently defined.  However, negative return values are reserved,
+and might be used in the future for extensions such as indicating errors.
+Software is therefore required to use less than or equal to zero as the exit condition for the CMO.UR loop.
+
+[NOTE]
+====
+NOTE: Unfortunately, RVC 16 bit compressed instructions only support branches equal or not equal to zero, not greater than or less than comparisons. Therefore the recommendation that a less than or equal test for use of the loop exit condition increases code size.
+
+ISSUE: Q: should we refuse possible future extensions with negative return values in order to save two bytes of code size?
+====
+
+[NOTE]
+====
+The CMO.UR instructions avoid the need for the user to know or discover the number of lines in the cache,
+by starting the loop at 0
+and modifying the index until 0.
+
+If the operation is not implemented, e.g. if it is for a cache that
+does not exist, CMO.UR and be treated as a no-op in the loop will
+terminate immediately.
+
+Typical cache entries have (set,way) coordinates.
+The microarchitecture entry number may be a simple transformation such as
+`e = set*nways+way + 1`
+and the iteration may simply decrement by one for every cache line affected until 0 is reached.
+
+The offset +1 in this transformation is required so that index zero can be  use as the start and end of the sequence.
+
+Previous versions of this proposal started and ended the loop with index -1.
+This version uses zero instead, saving a few instructions  by using the X0 zero  register.
+
+
+Pseudocode for a simple CMO.UR instruction implementation might look like:
+
+   CMO.UR rd,rs1  // where register numbers rd and rs1 are required to be the same
+       index := (rs1-1) & (CACHE_ENTRIES - 1)
+       perform CMO for cache entry #index
+       index := index-1
+       rd := index
+
+Other recurrences for the index are possible.
+All that is required is that the sequence begin with 0 and terminate with 0, with all intermediate values positive and no repetitions,
+so that the reference CMO.UR loop is guaranteed to make forward progress and eventually terminate, after visiting all of the entries in the cache,
+It is not required that the index be monotonically decreasing.
+
+Indeed "twisting" the index sequence might be used to hide microarchitecture details and mitigate information leaks.
+(The twisting might even be PC dependent.)
+
+The sequence of indexes may contain values that do not map to actual cache lines, so long as those invalid mappings do not cause exceptions.
+(E.g. *_Way Locking and CMO.UR_* or *_Multiple Caches and CMO.UR_*.)
+Such implementations should not, however, "waste too much time" on invalid entries.
+
+Users should not assume or rely on a simple mapping of CMO.UR indexes to (set,way).
+E.g. users should not assume that they can invalidate an entire way of a 4-way set associative cache
+by stepping the index by -4
+in a non-standard loop structure.
+
+See <<CMO.UR indexes should not be created out of thin air>>.
+
+=== *_Advisory vs Mandatory CMOs_*
+
+As described in *_Advisory vs Mandatory CMOs_*:
+
+* Some CMOs are optional or advisory: they may or may not be performed,
+ ** Such advisory CMOs may be performed beyond the range of microarchitecture entry numbers specified
+* However, some CMOs are mandatory, and may affect the values observed by *_timing independent code_*.
+ ** Such architectural CMOs are guaranteed not to be performed beyond the range of microarchitecture entry numbers specified (?? TBD: is this possible, if cache line size is very ??)
+
+Security timing channel related CMOs are mandatory but do not affect the values observed by *_timing independent code_*.
+POR: it is permitted for any non-value changing operations to apply beyond the range.
+
+
+NOTE: There is much disagreement with respect to terminology, whether
+operations that directly affect values (such as *_DISCARD cache
+line_*) are to be considered CMOs at all, or whether they might be
+specified by the CMO instructions such as CMO.UR. For the purposes of
+this discussion we will assume that they could be specified by these
+instructions.
+
+=== Possible implementations ranging from cache line at a time to whole cache
+
+The CMO.UR instruction family permits implementations that include
+
+. operating a cache line at a time
+. trapping and emulating (e.g. in M-mode)
+. HW state machines that can operate on the full range
+ ** albeit stopping at the first page fault or exception.
+
+First: Cache line at a time implementations using (set,way) are typical of many other ISAs, RISC and otherwise.
+
+Second: On some implementations the actual cache management interface is
+non-standard, e.g. containing sequences of CSRs or MMIO accesses to control
+external caches. Such implementations may trap the CMO instruction,
+and emulate it using the idiosyncratic mechanisms.
+Such trap and emulation would have high performance cost if performed a cache line at a time.
+Hence, the address range semantics.
+
+Third: While hardware state machines have some advantages, it is not
+acceptable to block interrupts for a long time while cache flushes are
+applied to every cache line in address range. Furthermore, address range CMOs
+may be subject to address related exceptions such as page-faults and debug breakpoints.
+The definition of this instruction permits state machine implementations that are *_restartable after partial completion_*.
+
+=== *_Actual CMO Operations_*
+
+==== Discussion:
+
+The software loop around the CMO range instructions is required only to support cache line at a time implementations.
+If this proposal only wanted to support hardware state machines or trap and emulate, the software loop would not be needed.
+
+Although some CMOs may be optional or advisory, that refers to their effect upon memory or cache.
+The range oriented CMOs like CMO.VAR and CMO.UR cannot simply be made into NOPs, because the loops above would never terminate.
+The cache management operation may be dropped or ignored,
+But RD must be set in such a way that the sequence beginning with 0 will eventually touch all cache lines necessary and terminate with 0.
+
+=== CMO.UR: Exceptions
+
+* Illegal Instruction Exceptions: taken, if the CMO.UR.<cmo_specifier> is not supported.
+* Permission Exception: for CMO not permitted
+ ** Certain CMO (Cache Management Operations) may be permitted to a high privilege level such as M-mode, but may be forbidden to lower privilege levels such as S-mode or U-mode.
+ ** TBD: exactly how this is reported. Probably like a read/write permission exception. Possibly requiring a new exception because identifier
+* Page Faults:
+ ** most cache hierarchies cannot receive page-faults on CMO.UR instructions, since the virtual the physical address translation has been performed before the data has been placed in the cache
+ ** however, there do exist microarchitectures (not necessarily RISC-V microarchitectures as of the time of writing)
+whose caches use virtual addresses, and which perform the virtual the physical address translation on eviction from the cache
+  *** such implementations _might_ receive page-faults, e.g. evicting dirty data for which there is no longer a valid virtual to physical translation in TLB or page table
+  *** although we recommend that system SW on such systems arrange so that dirty data is flushed before translations are invalidated
+* Other memory permissions exceptions (e.g. PMP violations): taken
+* Debug exceptions, e.g. data address breakpoints: taken.
+* ECC and other machine checks: taken
+
+=== ECC and other machine check exceptions during CMOs
+
+// Most of this is CMO-COMMON, but some if specific to CMO.UR and CMO.VAR (and maybe PREFETCH)
+
+NOTE: the term "machine check" refers to an error reporting mechanism for errors such as ECC or lockstep execution mismatches. TBD: determine and use the appropriate RISC-V terminology for "machine checks".
+
+Machine checks may be reported as exceptions or recorded in logging registers or counters without producing exceptions.
+
+In general, machine checks should be reported if enabled and if an error is detected that might produce loss of data. This consideration applies to CMOs: e.g. if a CMO tries to flush a dirty cache line that contains an uncorrectable error, a machine check should be reported.
+However, an uncorrectable error in a clean cache line may be ignorable since it is about to be invalidated and will never be used in the future.
+
+Similarly, a DISCARD cache line CMO may invalidate dirty cache line data without writing it back. In which case, even an uncorrectable error might be ignored, or might be reported without causing an exception.
+
+Such machine check behavior is implementation dependent.
+
+=== Permissions for CMOs
+
+
+
+==== Memory address based permissions for CMOs
+
+Most CMO.UR.<> implementations do not need to use address based permissions.
+CMO.UR for the most part are controlled by *_Permissions by CMO type_*.
+
+Special cases for memory address based permissions for CMO.UR include:
+
+E.g. virtual address translation permissions
+
+* do not apply to most implementations
+* might apply to implementations that perform page table lookup when evicting dirty data from the cache.
+ ** are not required to invalidate cache lines in such implementations
+
+E.g. PMP based permissions
+
+* TBD: what should be done if CMO.UR is evicting a dirty line a memory region whose PMP indicates not writable in the current mode?
+ ** this may be implementation specific
+ ** most implementations will allow this
+  *** assuming that privileged SW will have flushed the cache
+before entering the less privilege mode
+in order to prevent any problems that might arise
+(e.g. physical DRAM bank switching)
+
+==== *_Permissions by CMO type_*
+
+See section *_Permissions by CMO type_*
+which applies to both address range CMO.UR.<cmo_specifier> and microarchitecture entry range CMO.VAR.<cmo_specifier>
+CMOs, as well as to *_Fixed Block Size CMOs_*.
+
+=== Multiple Caches and CMO.UR
+
+Cache management operations may affect multiple caches in a
+system. E.g. flushing data from a shared L2 may invalidate data in
+multiple processors' L1 I and D-caches, in addition to writing back
+dirty data from the L2, while traversing and invalidating an L3 before
+eventually being sent to memory. However, often the invalidation of
+multiple peer caches, the L1 I and D caches, is accomplished by cache
+inclusion mechanisms such as backwards and validate.
+
+However, sometimes it is necessary to flush multiple caches without relying on hardware coherence cache inclusion. This could be achieved by mapping several different caches's (set,way) or other physical location into the same microarchitecture entry number space. However, this is by no means required
+
+== *_CMO UR index_*
+
+=== Traditional microarchitecture cache invalidation loops
+
+Many ISAs invalidate a cache in time proportional to the number of entries within the cache using a code construct that looks like the following:
+
+----
+   FOR S OVER ALL sets in cache C
+      FOR W OVER ALL ways in cache C
+           INVALIDATE (cache C, set S, way W)
+----
+
+Note that not all microarchitecture data structures have the associative (set,way) structure. We might generalize the above as
+
+----
+ FOR E OVER ALL entries in hardware data structure HDS
+     INVALIDATE (hardware data structure HDS, entry E)
+----
+
+If multiple hardware data structures need to be flushed or invalidated one might do something like the following
+
+----
+  FOR H OVER ALL hardware data structures that we wish to invalidate
+    FOR E OVER ALL entries in hardware data structure HDS
+       INVALIDATE (hardware data structure H, entry E)
+----
+
+Without loss of generality we will assume that if a hardware data structure has an O(1) bulk invalidate, that it is handle as above, e.g. that the "entry" for the purposes of invalidation will be the entire hardware data structure.  Similarly, some hardware data structures might invalidate for entries, e.g. all of the lines in a cache set, at once.
+
+Portable code might be able to determine what hardware data structures it needs to invalidate by inspecting a *_system description such as CPUID or config string_*. However, it may be necessary to invalidate the hardware data structures e.g. caches in a particular order. E.g. on a system with no cache coherence, not even hierarchical, it may be necessary to flush dirty data first from the L1 to the L2, then from the L2 to the L3, ... ultimately to memory.
+
+=== CMO.UR on non-strictly inclusive cache levels may not be able to guarantee completion flushes or invalidation
+
+It is expected that typical implementations will iterate over a single cache level. Strict inclusion with backwards invalidation may provide the effect of invalidating all inner levels of of memory hierarchy.
+
+However, it is very common for cache hierarchies NOT to be strictly inclusive. Examples include:
+
+* Strictly exclusive caches
+* Intel P6's "accidentally inclusive" L2$
+   ** fills allocated in both L1$ and L2$, but L2$ may evict without backwards invalidatimng L1$.
+   ** Snoops probe both.
+* ARM's pseudo-inclusive and pseudo-exclusive caches.
+
+CMO.UR operations for non-strictly inclusive cache levels may not be
+able to guarantee that a cache level has been completely flushed or
+invalidated.  E.g. a line may be in the inner exclusive cache when
+the outer is scanned, and vice versa.
+
+Implementations may provide mechanisms to permit complete invalidation
+and flushes. E.g. performing the CMO in a no-fill cache mode.\
+However, such special cache modes are NOT included in this proposal.
+
+This consideration applies to CMO.UR operations.
+
+CMO.VAR implementations are, however, required to guarantee that all addresses in the range specified have been affected by the CMO.
+
+
+
+=== CMO.UR implementations may iterate over multiple cache levels
+
+It is expected that typical implementations of CMO.UR will iterate over a single cache level.
+Strict inclusion with backwards invalidation may provide the effect of invalidating all inner levels of of memory hierarchy.
+Whether such strict inclusion exists, or whether it is implemented by an actual cache layer, or by mechanisms such as inclusive snoop filter without data,
+are implementation dependent.
+
+Furthermore, implementations may iterate over multiple caches and cache levels,
+by mapping several such caches into the same index space.
+However, this must be done withing the constraints of the abstract cache model in .<cmo_specifier>.<which_cache>
+
+== CMO.UR indexes should not be created out of thin air
+
+Software invoking CMO.UR should not create arbitrary CMO UR indexes "out of thin air".
+
+The index values should only be as obtained from the *_CMO.UR loop construct_*,
+except for the starting value, 0.
+
+----
+   reg_for_cmo_index := 0
+   LOOP
+      CMO.UR RD:reg_for_cmo_index, RS1:reg_for_cmo_handle
+   UNTIL reg_for_cmo_index \<= 0
+----
+
+Invoking CMO.UR with input register (RD) index values that were not as obtained from the sequence above is undefined.
+
+* Obviously, if invoked from user code there must be no security flaw. Similarly, if executed by a guest OS on top of a hypervisor.
+* It is permissible for an implementation to ignore CMO UR index values that are incompatible with the *_CMO descriptor_*
+
+If the software executing the *_CMO loop construct_* performs its own skipping of CMO UR indexes, the effect is undefined (although obviously required to remain secure).  In particular, it cannot be guaranteed that any or all of the work required to be done by the *_CMO.UR loop construct_* will have been completed.
+
+NOTE: the loop construct can be interrupted and restarted from scratch. There is no requirement that the loop construct be completed.
+
+[cols=2*]
+|===
+| A thread might migrate from one CPU to another while the CMO loop construct is in progress. If this is done it is the responsibility of the system performing the migration to ensure that the desired semantics are obtained. For example, the code that is being migrated might be restricted to only apply to cache levels common to all processors migrated across. Or similarly the runtime performing the migration might be required to ensure that all necessary caches are consistent. *_(see issue)
+| ISSUE: process migration argues for whole cache invalidation operations and against the partial progress loop construct_*.
+|===
+
+ISSUE: should it be legal for software to save the indexes from a first traversal of this loop and replay them later?
+
+* Certainly not if the operation as specified by the *_CMO descriptor_* is different from that for which the indexes were obtained.
+* I would like to make it illegal overall, but I can't CNP practical way to do this.
+
+
+[NOTE]
+.Reserved: Negative final value of RD/RS1.
+====
+Earlier versions of this proposal returned final values of RS1 other than 0 to indicate errors.
+This is no longer proposed,
+but such negative values are reserved for possible future use.
+====

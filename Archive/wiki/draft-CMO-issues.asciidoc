@@ -1,0 +1,47 @@
+
+# Other issues for this CMO Proposal
+
+[NOTE]
+====
+Discussion, issues, and rationale, have been embedded in this in such NOTE sections,  interleaved with normative text.
+
+This section  serves to capture such issues that  did not naturally get interleaved elsewhere.
+====
+
+[NOTE]
+.Extensibility Limitation: Non-address tag specific invalidations
+====
+Many computer systems have "special tags" - non-address tags - in their caches - e.g. security domains - and want  selective cache invalidations and flushes  for such  special-tags.
+
+The instruction format in this current CMO proposal cannot be extended to do this. The address range CMO.AR already uses all three register fields in the standard RISC-V R format, so there is no free register operand to specify the special-tag.  The microarchitecture index CMO.UR only uses 2 register fields, but it encoding is packed such that CMO.UR = CMO.AR with rs2=x0, so again there is no free register operand specify the special-tag.
+
+This is acceptable for use case of security information leak mitigation, which requires the entire cache to be invalidated or flushed.
+
+But there are other use cases which can benefit from selective special-tag invalidations. In particular, when the special-tag is being recycled, when it was used for an old process that is no longer running, and is needed for a new process.
+
+Also, it seems natural to extend this CMO  proposal to TLB invalidation,  but it is quite common in computer instruction sets to provide  PID or ASID or VMID   specific invalidations. Not just when recycling such a special-tag, but also when translations are changed.
+====
+
+[NOTE]
+.CPU hardware may not be aware of system configuration
+====
+Operations such as "flush to the point of I/O coherence"
+are  dependent not on CPU microarchitecture but on system architecture.
+E.g.  the point of I/O coherence may be DRAM, or it may be a last level cache, if the I/O device can do cache line injection.
+Indeed,  the point of I/O coherence  may be different for different devices in the same system.
+SW may only want to do the minimum necessary for the device it is working with.
+There is no provision in this CMO proposal for that.
+
+Similarly, cache flushes for  security related information channel mitigation
+may  in general need to flush all cache levels, L1-L2-L3
+(or  at least up to the cache level where the bandwidth of the channels is acceptably low).
+However, in  other situations some of the outer cache levels may be  partitioned and not require flushing, e.g. by cache ways.
+
+Exactly which levels of cache need to be flushed  for any particular operation is not known to the CPU, may be system  hardware dependent, but may also be system software dependent.
+
+In general, what CMO should be used, .<cmo_specifier>>.<which_cache>,  should be mapped from abstract CMO concepts to which caches actually must be involved.
+There is no provision in this memo for such mapping in this proposal, except for trapping and emulating by M-mode.
+
+Realistically this will probably mean that the abstract CMO operations in this proposal are useless.  Programmers will need to figure out which caches actually get modified by any of the instructions, and will probably ignore the abstractions.
+This is no better than the current state of the art.
+====
