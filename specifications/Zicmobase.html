@@ -1556,8 +1556,10 @@ supported by the implementation.</p>
 <p>The following subsections detail how the <code>xcmocontrol</code> CSRs govern the
 execution of CMO instructions.</p>
 </div>
+<div class="sect3">
+<h4 id="_determining_traps">3.2.1. Determining Traps</h4>
 <div class="sect4">
-<h5 id="_determining_illegal_instruction_exceptions">Determining Illegal Instruction Exceptions</h5>
+<h5 id="_illegal_instruction_exceptions">Illegal Instruction Exceptions</h5>
 <div class="paragraph">
 <p>The descriptions for the <code>CBME</code> and <code>CBWE</code> bits in the <code>xcmocontrol</code> registers
 include a <em>privilege_mode</em> parameter that corresponds to the privilege modes
@@ -1643,7 +1645,7 @@ exceptions)</p>
 </div>
 </div>
 <div class="sect4">
-<h5 id="_determining_page_fault_guest_page_fault_and_access_fault_exceptions">Determining Page Fault, Guest-Page Fault, and Access Fault Exceptions</h5>
+<h5 id="_page_fault_guest_page_fault_and_access_fault_exceptions">Page Fault, Guest-Page Fault, and Access Fault Exceptions</h5>
 <div class="paragraph">
 <p>The descriptions for the <code>INVWxE</code> and <code>INVWxI</code> bits in the <code>xcmocontrol</code>
 registers include a <em>protection_mechanism</em> parameter that corresponds to the
@@ -1880,6 +1882,7 @@ level.</em>
 the behavior of <code>CBO.INVAL</code> in lower privilege levels based on whether write
 permission has been granted to that level by a particular protection
 mechanism.</em></p>
+</div>
 </div>
 </div>
 </div>
@@ -2197,7 +2200,7 @@ access fault depending on the CSR) [trap]</p>
 </div>
 <div id="footer">
 <div id="footer-text">
-Last updated 2021-06-16 10:02:10 -0700
+Last updated 2021-06-16 11:17:43 -0700
 </div>
 </div>
 </body>
