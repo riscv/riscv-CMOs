@@ -1,0 +1,1 @@
+[[Example: Config WG charter]]

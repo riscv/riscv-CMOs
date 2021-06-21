@@ -1,0 +1,22 @@
+
+// The CMO.VAR instruction is intended to be used in a software loop such as that below:
+
+
+In pseudocode:
+
+----
+x11 := lwb
+x12 := upb (= lwb + size_in_bytes)
+LOOP
+   CMO.VAR.<> x11,x11,x12
+UNTIL x1 ==x12
+----
+
+In assembly code:
+
+----
+    x11 := lwb
+    x12 := upb
+L:  CMO.VAR.<> x11,x11,x12
+    bne x11,x12,L
+----

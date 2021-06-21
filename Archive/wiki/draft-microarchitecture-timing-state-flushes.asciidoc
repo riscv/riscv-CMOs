@@ -1,0 +1,108 @@
+
+=== Flushes of Microarchitecture State that Affects Timing Channels
+
+Requirement: *_all_* microarchitecture state that influences timing, such as predictors, prefetchers, cache LRU bits, etc.,
+should be invalidated by the most global CMO.UR.ALL.TC instruction, i.e. with the timing_channel enabled property indicated by the  .<cmo_specifier>.
+
+It is expected that subsets of such microarchitecture state will be associated with other CMO.UR.*.timing_channel instructions.
+
+NOTE: E.g. the instruction cache invalidation CMO.UR.I.TC may invalidate simple branch predictors,
+but not the L2 cache LRU bits.
+Which microarchitecture timing state is associated with which CMO.UR.*  instructions  is implementation dependent.
+There should be a way  to discover such associations, but that is not part of this proposal.
+
+
+
+The phrasing "all microarchitecture timing state ... should be invalidated"
+is defined to mean "within the implementation dependent security model of an implementation".
+Some implementations may not invalidate any microarchitecture state.
+and should therefore be considered insecure for use cases that involve untrusted users.
+Other  implementations may invalidate some but not all.
+These  limitations should be documented  so that users can determine  if an implementation is suitable for their security requirements.
+Such documentation is not part of this proposal.
+
+Permission: CMO.UR.* without the TC property may invalidate such microarchitectures timing channel state.  I.e. it is permitted to be more conservative than is required.
+
+TIP: however, it is expected that  use cases such as  software managed  cache coherency will  require invalidating caches,  but will not require invalidating timing state, so performance would benefit by distinguishing CMO.*.TC=1 from CMO.*.TC=0.
+
+Permission: CMO.VAR.* instructions, i.e. memory address range based instructions, may invalidate  microarchitecture timing state,  but are not required to do so.
+
+NOTE: ISSUE: should we provide orthogonal encodings CMO.VAR.*.TC (currently proposed),  or should we save encoding space by not providing them?
+
+Requirement: either the CMO.*.TC instructions unconditionally trap, or the <<Privilege/Delegation Mechanism for CMOs>> is implemented, allowing system software to enforce trapping if desired.
+
+NOTE: There is no requirement to unconditionally trap unimplemented
+CMO.*.TC  instructions, even on implementations that do not make any attempt to
+invalidate icroarchitecture timing state. This allows code that uses CMO.*.TC
+to run  portably  on such systems.
+But such code on such systems is only secure  if the system makes guarantees such as  not having entrusted users.
+System software such as an OS is encouraged to use the <<Privilege/Delegation Mechanism for CMOs>> to trap such instructions when the guarantee is not met.
+
+
+
+
+
+
+[NOTE]
+====
+Microarchitecture timing channels data structures
+are inherently implementation dependent.
+
+Some of these structures can be "instantaneously" invalidated, i.e. in O(1) time, not proportional to size or number of elements.
+
+However, some of these structures cannot be instantaneously invalidated, and must be scanned or iterated over.
+
+Different implementations may implement conceptually similar structures in either way.
+E.g. a branch predictor might be O(1) invalidated inside the CPU;
+but some components of some branch predictors are implemented outside the CPU and must be scanned
+e.g. several companies have placed branch predictor information in the L2 cache.
+
+Some of these structures, such as LRU bits and some large branch
+predictors, are associated with memory addresses, and are invalidated
+by the CMO.* range instructions when the appropriate bit in
+the .<cmo_specifier> funct7 is set, aka the "security" bit
+
+Some of these mechanisms are not naturally associated with caches explicitly managed by the CMO.* instructions' <cmo_specifier>.
+E.g. while it might be reasonable to associate fully tagged BTBs with branch addresses in memory,
+branch predictor pattern history tables (PHTs) are usually hashed and have no tags.
+
+Nevertheless, it is required that CMO.UR.ALL.TC  will invalidate all  microarchitecture timing channels state,
+ranging from branch predictors inside the CPU  to LRU bits in external caches.
+====
+
+[NOTE]
+====
+ISSUE:  this proposal does not provide any ability to invalidate  microarchitecture timing state such as branch predictors
+independent of the instruction cache, or some other cache. Should it?
+
+CMO.UR.*.TC  invalidations of microarchitecture timing state
+are required to mitigate timing channels for security - e.g. to mitigate security flaws such as Spectre.
+They are occasionally also desired to improved reproduceability of benchmarks and tests.
+
+As far as we know, security timing channel nearly always requires invalidating caches -  instruction and data cache timing channels  are ubiquitous.
+such caches need not be invalidated for timing channels mitigation only where (a)  there are no caches, or (b)  the capacitors are strictly partitioned.
+Therefore, for security,  it seems reasonable to always couple branch predictor invalidation to cache invalidation/flushing.
+
+Non-security purposes, such as testability and benchmarking, may prefer not to invalidate  microarchitecture timing state,  but that is not part of this proposal.
+====
+
+
+
+
+[WARNING]
+====
+Unfortunately,  in many implementations CMO.UR.ALL.TC  cannot guarantee that all microarchitecture timing channels state has been invalidated,
+for the same reasons  that CMO.UR.*  cannot guarantee that a cache is entirely invalid after the instruction.
+Except for  strictly inclusive caches.
+In the presence of non strictly inclusive caches,
+e.g. exclusive L1/L2  cache hierarchies
+a CMO.UR.* a line may be in the L2 cache when the L1 cache is scanned,
+but may migrate to the L1 cache before the set it resides in is scanned in the L2 cache.
+Such behavior is  implementation dependent.
+Implementations may provide special cache modes such as "no fill cache mode"
+that permit complete invalidation to be guaranteed,
+but such modes typically are not allowed to user mode.
+
+The conditions in which CMO.UR.*.TC can guarantee  complete invalidation must be documented,
+and should be discoverable,  although such discovery mechanisms are not part of this proposal.
+====

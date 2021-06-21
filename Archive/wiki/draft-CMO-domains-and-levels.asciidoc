@@ -1,0 +1,68 @@
+
+=== CMO memory hierarchy domains and levels .<cmo_specifier>.<which_cache>
+
+The .<which_cache> property specified the domains and levels involved in CMO operations.
+
+"Domains" refers to CMOs that flush data from not just one cache, but from severral layers of cache.
+Sometimes by flushing an outer inclusive layer.
+Sometimes by traversing multiple levels.
+
+Actual implementations may have many idiosyncratic caches and other parts of the memory hierarchy.
+
+There should bne a standard RISC-V way to flush such non-standard implementation specific cache levels, but that is not part of this proposal.
+
+Instead this proposal defines a small(?) number of abstract cache layers. Implementation cache layers will be mapped onto these layers.
+
+These pseudo-abstract layers are
+
+Cache levels and domains
+
+* POC(I,D)
+  ** the Point of Consistency for Instructions and Data, for the common case of inconsistent instruction and data caches
+  ** ARM calls this the Point of Unification
+* The POC(ID) defibnes two domains that may need to be flushed
+  ** I-->POC(ID) - the path from processor through I$ to the Point of ID consistency
+  ** D-->POC(ID) - the path from processor through D$ to the Point of ID consistency
+
+* POC(D*), domain P*-->POC(D*)
+  ** the path from any or all of a set of processors to the common level for all processors in that set.
+  ** ARM calls this the Point of Inner Comsistency
+  ** assumed cache coherent in this domain
+  ** used for performance optimizations, not correctness
+
+* POC(Unc), domain P*-->POC(Unc)
+  ** the path from any or all of a set of non-cache-coherent processors to a common point
+  ** SW managed consistency works if this domain is flushed to POC(Unc)
+
+* POC(Uio), domain P*-->POC(Uio)
+  ** the path from any or all of a set of non-cache-coherent processors to a point in common with non-coherent I/O
+  ** SW managed consistency for I/O devices works if this domain is flushed to POC(Uio)
+
+Frequently, POC(Unc), POC(Uio) are identical. Frequently, POC(Unc), POC(Uio) are DRAM.  But not always, therefore distinguished.
+
+Memory, Volatile and Non-Volatile
+
+* M, domain P*-->M
+  ** memory, eg DRAM
+  ** not necessarily battery backed up
+
+* BM, domain P*-->BM
+  ** memory that survives power removal from system parts such as harts
+  ** frequently the same as main memory, bit not always.  May be a subset.
+
+* NV1, domain P*-->MN/BM-->NV
+  ** memory that survives even when batteries fail
+     *** i.e,. last years, not days
+* NVR, domain P*-->MN/BM-->NV-->NVR
+  ** a;;, last, or redundant/reliable level of nonvolatile memory
+  ** memory that tolerates failures of other NV1 components
+     *** i.e,. last years, not days
+
+
+*_Count_*: 9 - 4 bits
+
+Unfortunately, would like local/global flavors of the above.  => 5 bits => exceeds 256 emncodimngs.
+
+So need to compress more.
+
+TBD...

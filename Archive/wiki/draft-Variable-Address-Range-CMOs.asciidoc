@@ -1,0 +1,298 @@
+// Variable Address Range CMOs
+
+Traditional CMOs are performed a cache line at a time, in a loop.
+This exposes the cache line size,
+and inhibits performance for some implementations.
+
+Some use cases require or prefer CMOs that apply to a set of memory addresses, typically a contiguous range.
+Furthermore, address ranges permit optimizations that perform better on some implementations than looping a cache line at a time.
+
+This proposal defines the instruction in such a way that allows <<_possible_implementations_ranging_from_cache_line_at_a_time_to_full_address_range>>,
+with a loop such as that below
+
+include::variable-address-range-loop.asciidoc[]
+
+////
+CMOs are just one type of instruction that might wish to apply to a
+set of memory addresses. See the generic discussion in *_Variable
+Address Range Instructions like CMOs, MEMSET, MEMZERO, and
+MEMCOPY_*. If there are variable address range CMOs as well as other
+variable address range instructions like MEMZERO, then it would be
+nice if they used similar design principles.
+////
+
+See below, <<_possible_implementations_ranging_from_cache_line_at_a_time_to_full_address_range>>,
+for more details.
+
+== CMO.VAR: Variable Address Range CMOs
+
+Proposed name: CMO.VAR.<cmo_specifier>
+
+Encoding: R-format
+
+* R-format: 3 registers: RD, RS1, RS2
+ ** Register numbers in RD and RS1 are required to be the same
+  *** If the register numbers in RD and RS1 are not the same an illegal instruction exception is raised
+  (unless such encodings have been reused for other instructions in the future).
+  *** The term RD/RS1 will refer to this register number
+* numeric encoding: TBD
+  ** 2 funct7 encodings => 256 possible <cmo_specifiers>
+
+Assembly Syntax:
+
+:indent: 4
+
+* CMO.VAR.<cmo_specifier> rd,rs1,rs2
+
+But, since register numbers in RD and RS1 are required to be the same, assemblers may choose to provide the two register operand version
+
+* CMO.VAR.<cmo_specifier> rd_and_rs1,rs2
+
+Operands:
+
+* Input:
+ ** memory address range:
+  *** RS1 (RD/RS1) contains `lwb`, the lower bound, the address at which the CMO will start
+  *** RS2 contains `upb`, the upper bound of the range
+ ** type of operation and caches involved
+  *** .*_<cmo_specifier>_*: i.e. specified by the encoding of the particular CMO.VAR instruction
+* Output
+ ** RD (RSD/RS1) contains `stop_address`, the memory address at which the CMO operation stopped
+  *** if RD = RS2:`upb`, the operation was completed
+ ** if RD = RS1:`lwb`, the operation stopped immediately, e.g. an exception such as a page fault or a data address breakpoint at lwb
+ ** if `lwb` < RD < `upb`, the operation has been partially completed
+  *** e.g. at an exception
+
+=== Range specification
+
+The CMO is applied to the range [RS1,RS2), i.e. to all memory addresses A such that RS1 \<= A < RS2.
+Not that the upper bound ``upb`` is exclusive, one past the end of the region.
+This allows the calculation ``upb=lwb+size_in_bytes``.
+
+Pedantically, the range is all memory addresses `A` such that `0 <= A  < upb-lwb`.
+This permits wrapping around the address space.
+To specify a range that reaches the maximum possible (unsigned) address, specify `upb=0`.
+
+=== Return value RD
+
+This instruction family is *_restartable after partial completion_*. E.g. on an exception such as a page fault or debug address breakpoint the output register RD is set to the data address of the exception,
+and since the instruction is *_source/dest_*, with the register numbers in RD and RS1 required to be the same, returning from the exception to the CMO.VAR instruction will pick up execution where it left off.
+
+Similarly, implementations may only process part of the range specified by [RS1,RS2), e.g. only the 1st cache line, setting RD to an address _within_ the next cache line, typically the start,
+Software using this instruction is required to wrap it in a loop to process the entire range.
+
+See <<_loop_to_support_cacheline_at_a_time_implementations>>.
+
+
+=== CMO Operation Type and Caches Involved - .<cmo_specifier>
+
+The .<cmo_specifier> is derived from the instruction encoding.
+This proposal asks for a total of 256, two funct7 R-format encoding groups.
+
+The .<cmo_specifier> specifies both the caches involved in the CMO - more precisely, the parts of the cache hierarchy involved - as well as the actual cache management operation.
+
+The cache management operations specified include
+
+* CLEAN (write back dirty data, leaving clean data in cache)
+* FLUSH (writeback dirty data, leaving invalid data in cache)
+and other operations, as well as the caches involved. See *_CMO (Cache Management Operation) Types_*.
+(TBD: I expect that one or more of the .<cmo_specifier> will be something like a number identifying a group of CSRs loaded with an extended CMO type specification.)
+
+In assembly code certain CMO specifiers will be hardlined, and others may be indicated by the group number:
+
+* CMO.VAR.CLEAN
+* CMO.VAR.FLUSH
+* CMO.VAR.0
+* CMO.VAR.1
+
+TBD: full list of CMOs .<cmo_specifiers> is in a spreadsheet.
+TBD: include here.
+
+== DETAILS
+
+=== Range Definition [RS1:lwb,RS2:upb)
+
+The CMO is applied to the range [RS1,RS2), i.e. to all memory addresses A such that RS1 \<= A < RS2.
+Not that the upper bound ``upb`` is exclusive, one past the end of the region.
+This allows the calculation ``upb=lwb+size_in_bytes``.
+
+Pedantically, the range is all memory addresses `A` such that `0 <= A  < upb-lwb`.
+This permits wrapping around the address space.
+To specify a range that reaches the maximum possible address, spercify `upb=0`.
+
+CMOs (Cache Maintenance Operations) operate on *_NAPOT_* memory blocks such as cache lines, e.g. 64B, that are  implementation specific, and which may be different for different caches in the system.
+
+CMO.VAR is defined to always apply to at least such memory block, even if RS1 >= RS2.
+
+The range's upper and lower bounds, RS1:``lwb`` and `upb` are _not_ required to be aligned to the relevant block size.
+Therefore RS1:``lwb`` is an address _within_ the first memory block to which the operation will apply.
+Similarly, `upb`, the highest address in the range specified by the user, may lie within such a memory block, so the operation may include and apply beyond `upb` to the next block boundary.
+
+As described in *_Advisory vs Mandatory CMOs_*:
+
+* Some CMOs are optional or advisory: they may or may not be performed,
+ ** Such advisory CMOs may be performed beyond the range [`lwb`,`upb`)
+* However, some CMOs are mandatory, and may affect the values observed by *_timing independent code_*.
+ ** if `upb` lies in a memory block that does not overlap any of the blocks in [`lwb`,`upb`)
+then the implementation must guarantee that the mandatory or destructive CML has not been applied to the memory block starting at address `upb`.
+
+Security timing channel related CMOs are mandatory but do not affect the values observed by *_timing independent code_*.
+TBD: are such CMOs required not to apply beyond the *_address range rounded to block granularity_*?
+POR: it is permitted for any non-value changing operations to apply beyond the range.
+
+NOTE: There is much disagreement with respect to terminology,
+whether operations that directly affect values (such as *_DISCARD cache line_*)
+are to be considered CMOs at all, or whether they might be
+specified by the CMO instructions such as CMO.VAR.
+For the purposes of this discussion we will assume that they could be specified by these
+instructions.
+
+=== Possible implementations of CMO.VAR ranging from cache line at a time to full address range
+
+The CMO.VAR instruction family permits implementations that include
+
+. operating a cache line at a time
+. trapping and emulating (e.g. in M-mode)
+. HW state machines that can operate on the full range
+ ** albeit stopping at the first page fault or exception.
+
+First: Cache line at a time implementations are typical of many other ISAs, RISC and otherwise.
+
+Second: On some implementations the actual cache management interface is
+non-standard, e.g. containing sequences of CSRs or MMIO accesses to control
+external caches. Such implementations may trap the CMO instruction,
+and emulate it using the idiosyncratic mechanisms.
+Such trap and emulation would have a high-performance cost if performed a cache line at a time.
+Hence, the address range semantics, permitting the trap ciost to b e amortized.
+
+Third: While hardware state machines have some advantages, it is not
+acceptable to block interrupts for a long time while cache flushes are
+applied to every cache line in address range. Furthermore, address range CMOs
+may be subject to address related exceptions such as page-faults and debug breakpoints.
+
+
+==== CMO.VAR Loop to support cacheline at a time implementations
+
+The CMO.VAR instruction is intended to be used in a software loop such as that below:
+
+include::variable-address-range-loop.asciidoc[]
+
+Note that the closing comparison BNE is exact.
+The CMO.VAR instruction is required to return the exact upper bound when it terminates
+
+[NOTE]
+.Rationale: Exact next start address returned in RD
+====
+Returning the exact upper bound rather than an address in a cache block containing or just past the upper bound,
+allows the exact comparison BNE in the reference loop, and hence permits the exclusive range to apply right up to last address, and to wrap,
+at the cost of a more complicated address computation.
+====
+
+
+==== Variable Address Range CMO loop construct
+
+The software loop around the CMO range instructions is required only to support cache line at a time implementations.
+If this proposal only wanted to support hardware state machines or trap and emulate, the software loop would not be needed.
+
+Similarly, the upper bound operand RS2:``upb?``, is only required to support address range aware implementations,
+such as trap and emulate or hardware state machines.
+Cache line at a time implementations may ignore the RS2 operand.
+Therefore, the operation is always applied to at least one memory address.
+
+To guarantee that the loop wrapped around the CMO range instructions makes forward progress
+in the absence of an exception the value output to RD must always be greater than the value input from RS1,
+recalling that register numbers RD and RS1 are required to be the same.
+(On an exception output RD may be unchanged from input RS1.)
+
+Typically, the output value RD will be the start address of the next cache block.
+
+To guarantee that the loop terminates, on the final iteration the output value RD must be equal to RS2.
+
+In other words
+~~~~
+IF rs1 && rs2 are in the same cache line
+   perform CMO for cache line containing rs1 IF not at beginning of cache line
+   rd := rs2
+ELSE
+   perform CMO for cache line containing rs1
+   rd := (rs1 + CL_SIZE) & ((1<<CL_SIZE)-1)
+~~~~
+
+Although some CMOs may be optional or advisory, that refers to their effect upon memory or cache.
+The range oriented CMOs like CMO.VAR cannot simply be made into NOPs, because the loops above would never terminate.
+The cache management operation may be dropped or ignored,
+but RD must always be set to guarantee that the loop will make eventually terminate,
+
+=== Exceptions
+g
+* Illegal Instruction Exceptions: taken, if the CMO.VAR.<cmo_specifier> is not supported.
+* Permission Exception: for CMO not permitted
+ ** Certain CMO (Cache Management Operations) may be permitted to a high privilege level such as M-mode, but may be forbidden to lower privilege levels such as S-mode or U-mode.
+ ** TBD: exactly how this is reported. Probably like a read/write permission exception. Possibly requiring a new exception because identifier
+* Page Faults: taken
+* Other memory permissions exceptions (e.g. PMP violations): taken
+* Debug exceptions, e.g. data address breakpoints: taken.
+* ECC and other machine checks: taken or logged
+ ** see below
+
+=== ECC and other machine check exceptions during CMOs
+
+NOTE: the term "machine check" refers to an error reporting mechanism for errors such as ECC or lockstep execution mismatches. TBD: determine and use the appropriate RISC-V terminology for "machine checks".
+
+Machine checks may be reported as exceptions or recorded in logging registers or counters without producing exceptions.
+
+In general, machine checks should be reported if enabled and if an error is detected that might produce loss of data.
+This consideration applies to CMOs: e.g. if a CMO tries to flush a dirty cache line that contains an uncorrectable error, a machine check should be reported.
+However, an uncorrectable error in a clean cache line may be ignorable since it is about to be invalidated and will never be used in the future.
+
+Similarly, a DISCARD cache line CMO may invalidate dirty cache line data without writing it back. In which case, even an uncorrectable error might be ignored, or might be reported without causing an exception.
+
+Such machine check behavior is implementation dependent.
+
+=== Permissions for CMOs
+
+==== CMO.VAR: Memory address based permissions for CMOs
+
+The CMO.VAR.<cmo_specifier> instructions affect one or more memory addresses,
+and therefore are subject to memory access permissions.
+
+Most CMO (Cache Management Ops) require only read permission:
+
+* CLEAN (write out dirty data, leaving clean data in cache)
+* FLUSH (Write out dirty data, invalidate all lines)
+
+Even though "clean" and "flush" may seem to be like write operations, and the dirty data can only have occurred as result of write operations,
+the dirty cache lines may have been written by a previous mode that shares memory with the current mode that has only read access.
+
+The overall principal is, if software could have accomplished the same operation e.g. flushing dirty data or evicting lines, using ordinary loads and stores, then only read permissions are required.
+
+If the operation is performed read permissions are required to all bytes in the range.
+
+(If an optional or advisory operation is not performed, no read permissions checks or exceptions are required.)
+
+Some CMOs affect values, and therefore require at least write permission:
+
+* ZALLOC (Allocate Zero Filled Cache Line without RFO)
+ ** e.g. IBM POWER DCBZ
+
+==== Permissions by CMO type
+
+Some CMOs not only affect value, but might also affect the cache protocol and/or expose data from other privileged domains.
+If implemented, these require privileges beyond those specified for memory addresses.
+Such operations include:
+
+* CLALLOC (Allocate Cache Line with neither RFO nor zero fill)
+ ** e.g. IBM POWER DCBA
+* DISCARD cache line
+ ** discard dirty data without writing back
+
+Similarly, while it might be possible for an ordinary user to arrange to flush a line out of a particular level of the cache hierarchy,
+doing so with ordinary loads and stores might be a very slow process,
+whereas doing so with a CMO instruction would be much more efficient, possibly leading to DOS (Denial of Service) attacks.
+Therefore, even CMOs that might otherwise require only read permission
+may be "modulated" by privileged software.
+
+See section <<_privilege_for_cmos>>
+which applies to both address range CMO.VAR.<cmo_specifier> and microarchitecture entry range CMO.UR.<cmo_specifier>
+CMOs, as well as to *_Fixed Block Size CMOs_* and prefetches.
+

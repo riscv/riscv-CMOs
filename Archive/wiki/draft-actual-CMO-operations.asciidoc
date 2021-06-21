@@ -1,0 +1,105 @@
+
+=== Actual CMO operations .<cmo_specifier>.<cmo_operation>
+
+==== Actual CMO operations- flushes and prefetches, etc.
+
+This proposal includes the following actual CMO operations. Short names are listed here - more cvomplete deascriptions in a section below.
+
+* Traditional CMOs: CLEAN, FLUSH, INVALIDATE-I$,  DISCARD
+
+* Less Common: INVALIDATE-CLEAN, SET-LRU, LOCK-LINE.
+
+Space should be reserved for more operations, included SAFER_DISCARD_1 and SAFER_DISCARD_2, that remedy the security deficiences of the DISCARD operation (the well known PowerPC DCBA) while preserving much of the performance advantage.
+
+In addition to these CBOs that perform various forms of flushes and invalidates,
+this proposal includes operations that are often not called CMOs.
+
+* Prefetches: PREFETCH-R, PREFETCH-EW, PREFETCH-X -  using the variable address range approach.
+
+* Destructive: ZALLOC - allocate a zero-filled-cache line.
+
+Some have requested locking versions: ZALLOC-and-LOCK, and FETCH-R/W/X-and-LOCK.
+
+*_COUNT_*: 13 encodings: 4 bits.
+
+==== Security / Timing Channel Bit
+
+Requirement: in addition to flushing caches, it is also required, for
+timing channel mitigation such as in Spectre, to flush
+microarchitecture mechanisms that can provide timing channekls, such as
+LRU bits, predictors and prefetchers.  Some of these are associated
+with cache entries - hence the security/timing channel "bit".
+Not actually a bit - applied only to 2 CMOs.
+
+The security property is applied to the CMO.UR variants that leave no data behind:
+FLUSH and INVALIDATE.
+
+This increases the *_COUNT_* to 15 encodings: 4 bits.
+
+==== Detailed description of CMO operations
+
+Unfortunately, there is no widespread agreement as to what CMO names should be.  It is therefore necessary to define their behavior more completely according to cache states.
+
+Without loss of generality we will mention only tywo cache states,
+Clean and Dirty, relevant to writeback caches.  Writethrough and
+instruction caches contain only clean data, so may map to more than
+one operation that handles dirty data.
+
+Traditi0nal CMOs
+
+* CLEAN
+  ** Dirty-->WB-->Clean
+  ** Clean-->Clean
+* FLUSH
+  ** Dirty-->WB-->Invalid
+  ** Clean-->Invalid
+  ** Alternate names
+     ** Intel calls this WBINVD
+  ** Special considerations: security/timing channel variant for CMO.UR
+* DISCARD
+  ** Dirty-->no WB-->Invalid
+  ** Clean-->Invalid
+  ** Alternate names
+     ** Intel calls this INVD
+  ** Special considerations:
+     *** security/timing channel variant for CMO.UR
+     *** security hole
+        **** there are several safedr variants of DISCARD, reserving space for bit not actually part of this proposal
+* DISCARD-CLEAN
+  ** Dirty-->unaffected
+  ** Clean-->Invalid
+  ** Special considerations:
+     *** can be used in some incoherehnt I/O use cases
+     *** remedies the security problems of DISCARD - safe for user mode
+* SET-LRU
+  ** CMO.VAR only
+  ** most useful special case of the class of replacement algorithm manipulation CMOs
+
+Operations not typically considered CMOs:
+
+* PREFETCH-R
+* PREFETCH-W
+  ** prefetches in exclusive clean or dirty state - ready for writes with least possible expense
+* PREFETCH-X
+  ** prefetch code, to execute
+  ** like PREFETCH-R, except targetting I$ level(s)
+
+Destructive
+
+* ZALLOC
+  ** allocate cache line with reading - zero filling
+  ** PowerPC DCBZ
+* ALLOC
+  ** allocate cache line with reading - using whatever was there before
+  ** security hole - but still sometimes used
+  ** PowerPC DCBA
+
+Locking variants of the above
+* FETCH-R-and-LOCK
+* FETCH-W-and-LOCK
+* FETCH-X-and-LOCK
+* ZALLOC-and-LOCK
+* ALLOC-and-LOCK
+
+
+*_Count*_: 15 operations - 4 bits
