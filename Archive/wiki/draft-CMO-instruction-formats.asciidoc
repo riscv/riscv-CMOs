@@ -1,0 +1,220 @@
+
+
+=== PREFETCH.* fixed size block prefetches
+
+Briefly:
+
+`PREFETCH.64B.R: imm12.rs1:5.110.rd=00000.0010011`, e.g. ORI with RD=x0
+
+`PREFETCH.64B.WL imm12.rs1:5.110.rd=00000.0110011`, i.e. ANDI with RD=x0
+
+See section
+<<Fixed size block prefetches>> for discussion.
+
+
+=== CMO.VAR and CMO.UR instruction formats
+
+
+The range CMOs - including CMO.VAR (variable address range CMOs) and CMO.UR (microarchitecture structure index range CMOs) - are encoded as folows:
+
+MISC-MEM major opcode, with funct3=100 and 101.
+
+`CMO.* Funct7:7.rs2:5.rs1:5.10x.rd:5.010111`
+
+==== CMO funct7 field encodes .<cmo_specifier>
+
+This 7 bit field encodes the type of the CMO:
+
+* which caches the operation applies to (and/or other parts of the memory system)
+* what operation is actually performed (e.g. invalidate, flush dirty data)
+* other aspects, such as invalidating related prefetchers and predictors
+
+The CMO types are represented in the assembly syntax as the .<cmo_specifier> field.
+
+The CMO.VAR (address range) and CMO.UR (microarchecture index range) instructions
+interpret the funct7 .<cmo_specifier> field in the same way, if applicable.
+Some funct7 encodings are invalid for either CMO.VAR and/or CMO.UR.
+
+==== CMO register fields in instruction encodings
+
+These encodings have 3 register fields.
+
+CMO.VAR are encoded with register fields. RS1 contains the start
+address.  RS2 contains the stop address. RD is written with the
+updated start address.  i.e. RD=RS1 is required, so that this range
+instruction take exceptions when partially complete.  It is not validg
+for any of CMO.VAR's register operands to contain X0, the zero
+register.
+
+`CMO.VAR: Funct7:7.rs2:5.rs1:5.10x.rd:5.010111`
+with RD=RS1. All of RD,RS1, and RS2 are != X0 (00000).
+
+CMO.UR is encoded with register numbers RD=RS1, and RS2=X0, the zero register.
+RD=RS1 is once again required to permit partial progress and restartability after exceptions.
+RS1 contains the start index.
+Software
+initializes the instruction with RS1 set to 0.
+Instruction execution (HW or SW emulation) writes RD with the updated index.
+The enclosing software loop terminates when RD is 0 after the instruction.
+It is not valid for RD and RS1, to be different, or to be X0, the zero register.
+
+`CMO.UR: Funct7:7.00000:5.rs1:5.10x.rd:5.010111`
+with RD=RS1. All of RD,RS1, and RS2 are != X0 (00000).
+
+
+These encodings with other values of the register operands are not valid encodings for CMO instructions,
+where "not valid" means that they are either undefined instructions,
+or are used to encode other instructions using the register fields.
+
+In particular:
+
+* RD = X0 is not valid for CMOs
+* RS1 = X0 is not valid for CMOs
+* RD != RS1 is not valid for CMOs
+* while RS2=X0 distinguishes CMO.VAR from CMO.UR
+
+Other instructions in this proposal using registing register number dependent instruction encodings:
+
+COMPLETION_FENCE:
+the encoding `COMPLETION_FENCE.<cmo_specifier>:  Funct7:7.rs2:5.00000.101.00000.010111`,
+i.e. the CMO instruction, and Funct3=101, RD and RS1 = x0
+is used to encode a COMPLETION_FENCE instruction,
+e.g. for persistence to battery backed up RAM or NVRAM
+as specified by the .<cmo_specifier> field.
+
+
+[NOTE]
+.Rationale: Register number dependent instruction encodings
+====
+
+CMO.VAR requires three register fields, given the requirement that it it update its start index.
+
+CMO.UR only requires 2 register fields.  It is proposed to use the CMO.VAR encoding with RS2=X0,
+not just to save instruction encodings, but to save the administrative hassle of obtaining a new set of 2-register instruction encodings.
+This is not an important consideration, just convenient.
+If decoding RS2=X0 poses difficulties, we can just allocate a new 2-register field instruction encoding for CMO.VAR.
+
+It may be useful to use RS1=X0 and RS2=start index for more flavours of CMO.UR. However, for the most part CMO.UR and CMO.VAR have the same .<cmo_specifiers>
+
+This proposal describes CMO.VAR and CMO.UR as independent instructions, including for assembly syntax.
+Another instructions whose decode is based on register numbers, SFENCE.VMA is described as a singole instruction mnemonic,
+and it is always necessary to say things like SFENCE.VMA with RS1=x0 and RS2=x0 to order all reads and writes anywhere in the page table,
+versus RS1=x0 and RS2!=x0 ordering reads and writes only for the address space specified by RS2, and so on.
+These approaches are equivalent, except that it is fekt that separate mnemonics for CMO,VAR and CMO.UR increase understandability.
+
+====
+
+
+[NOTE]
+.TBD: rename CMO.VAR.* CMO.AR.* ?
+====
+CMO.VAR.* were named _variable_ address range to distinguish them
+from the _fixed_ address range or block size instructions in an earlier version of this propsal.
+The _fixed_ block size instructions have now been removed.
+CMO.VAR could be renamed CMO.AR
+====
+
+
+
+
+=== COMPLETION_FENCE: ensure persistence when power is removed from CPU, or entire system including DRAM
+
+Requirement: while many synchronization and ordering operations may be optimized away by microarchitecture
+so long as equivalent behaviour is obtained during normal operation,
+operations involving powering down the CPU (leaving state in battery backed up DRAM)
+or even tolerating powering down thec entire system (including battery backed up DRAM, leaving state in NVRAM)
+require that the operation actually be completed.
+
+The instruction encoding
+
+`COMPLETION_FENCE.<cmo_specifier>:  Funct7:7.rs2:5.00000.101.00000.010111`
+
+is provided for this purpose.
+
+==== COMPLETION_FENCE..<cmo_specifier>.<which_cache>
+
+The .<cmo_specifier> in Funct7 indicates to which level of the memory hierarchy completion is required.
+The level is encoded as in the CMO.* instructions.
+
+The interpretation of the .<cmo_specifier>.<which_cache> values is the same for COMPLETION_FENCE as it is for CMO.* instructions.
+They are discussed here in detail, because COMPLETION_FENCE motivates some levels that may be surprsing for other C<O instructions
+
+
+Which levels are implemented for COMPLETION_FENCE is implementation dependent.
+It is expected that, if a CMO ism provided to flush all state inside a level,
+then that level will be supported by COMPLETION_FENCE.
+
+Implementations may provide completion semantics to any, some. or all levels of the memory hierarchy
+
+Of particular importance are the .<cmo_specifier>.<which_cache> values that correspond to
+
+* Battery backed up DRAM
+   ** e.g. to remove power from CPU
+* First commit to non-volatile storage
+   ** persistence across power and battery failures
+* Full commit to non-volatile storage
+   ** commit to redundant copies
+   ** survives failutes of one (or more) non-volatile storage devices.
+
+Other completion/persistence levels are possible, for example
+
+* persistence to non-battery-backed DRAM
+   ** permitting hot-plug while power is maintained
+   ** may be the same as completion to battery backed-up DRAM
+* completion to points where non-cache-coherent memory accesses can be accessed comnsistenly
+   ** e.g. DRAM, if non-coherent I/O is only performed there
+   ** e.g. an L4 cache, if non-coherent I/O can inject into this level of the cache, but not further
+   ** e.g. a cache level shared by multiple CPUs that do not maintain full cache coherence to other caches
+      *** noting that it is possible for CPU non-coherence and I/O non-coherence to be resolved at different levels.
+
+==== COMPLETION_FENCE ignores other parts of .<cmo_specifier>
+
+COMPLETION_FENCE only takes heed of .<cmo_specifier>.<which_cache> field.
+
+The specification of which operation is actually performed by a CMO instruction is ignored for COMPLETION_FENCE.
+
+==== Which pending operations does COMPLETION_FENCE wait for?
+
+COMPLETION_FENCE waits for completion of all pending operations in the from domain specified by .<cmo_specifier>, to the level specified by the to-domain of .<cmo_specifier>.
+
+As discussed in .<cmo_specifier>, this may be limited to operations produced locally, e.g. by the current CPU,
+or it may extend to other CPUs in a cohedrence domain, especially if there may arise migration of data between peer caches
+without updating outer hierarchy levels.
+
+=== Issues for COMPLETION_FENCE
+
+[NOTE]
+.TBD: Issues for COMPLETION_FENCE
+====
+Q: Should COMPLETION_FENCE apply to specific operation types - e.g. writebacks, but not invalidates?
+A: as proposed, COMPLETION_FENCE applies to all operations initiated by CMO instructions,
+e.g. FLUSHes that write modified data to outer levels, and INVALIDATEs that remove data that may be rendered stale by non-coherent actions buy other devices.
+COMPLETION_FENCE does not apply to stores that are not affected by a CMO.* instruction.
+
+Q: Should COMPLETION_FENCE apply to specific memory addresses?
+A: not proposed. If this is to be done, it will an address range oriented instruction encoding, with RS1 and RD, just like CMO.VAR - essentially a new .<cmo_specifier>.<cmo_operation>
+
+Q: Should it be necessary to apply a COMPLETION_FENCE after any CMO?
+I.e. is it permitted to implement CMOs in a non-blockimg or
+asynchronous manner, and require COMPLETION_FENCE to ensure
+completion_fence even just for ordering semantics?
+
+Q: Should COMPLETION_FENCE be preemptable?
+A: yes, probably, since may be very long latency.
+But there is no address or index range that can be monotonically completed to guarantee forward progress.
+
+Q: Perhaps COMPLETION_FENCE should return a value, so that it can be wrapped in a loop?
+Q: but then do context switches need to save/rstore a progress indicator?
+A: not pursuing at this time. Would need to permit non-zero RD, with zero RS1 - an encoding which is available,
+but not currently permitted for COMPLETION_FENCE.
+
+A: strawman: COMPLETION_FENCE is blocking. OS may need to
+emulate. Otherwise, restarts from scratch, which may make forward
+progress difficult if other harts can initiate CMOs while yhe first is
+preempted.
+
+Q: should the delegation mechanism comprehend COMPLETION_FENCE?
+A: yes, probably. Probably needs to be treated like an extra .<cmo_operation>.<cmo_operation> value,
+for purposes of allocating corresponding fields in the CMO delegation CSRs.
+
+====

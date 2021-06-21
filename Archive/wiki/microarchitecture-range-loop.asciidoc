@@ -1,0 +1,19 @@
+
+// The CMO.UR instruction is intended to be used in a software loop such as that below:
+
+In pseudocode:
+
+----
+x11 := 0
+LOOP
+   CMO.UR.<> x11,x11
+WHILE X11 > 0
+----
+
+In assembly code:
+
+----
+    ADDI x11,x0,x0
+L:  CMO.UR.<> x11,x11
+    BGEZ L
+----

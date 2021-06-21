@@ -1,0 +1,119 @@
+
+[appendix]
+== Techpubs Information
+
+=== Conventions specific to this document.
+
+
+==== GitHub wiki markdown \[[links]]` are broken
+Bold italic *_links_* indicate text that should be links to pages in the original wiki.
+The tools used to generate this document HTML and PDF from asciidoc and markdown
+do not handle these links (yet).
+
+==== Rationale using AsciiDoctor NOTE admonition
+[NOTE]
+====
+_Rationale_ and other background information is indicated by AsciiDoctor NOTE sections such as this.
+
+TBD: I would really prefer to design an explicit RATIONALE style or admonition, but I do not know how to do this in AsciiDoctor yet.
+Therefore, repurposed AsciiDoctor's existing NOTE admonition style.
+Unfortunately, this has problems such as section headers not being allowed in the note/rationale text,
+and conversely that note/rationale text does not appear in the Table of Contents (TOC).
+Therefore, section headers do not appear as these rationale/notes, even if the entire section is rationale, not normative.
+
+====
+
+=== Techpubs Information
+
+This source document: {docname}{docfilesuffix}
+
+* docdatetime:  {docdatetime} - last modified date and time
+  ** unfortunately, this is only for the topmost file, NOT across all of the included files
+* localdatetime:  {localdatetime} - when generated
+
+
+Revisions - manually maintained, frequently obsolete:
+
+* revdate: {revdate}
+* revnumber: {revnumber}
+* revremark: {revremark}
+
+More techpubs information, including history thrashing as to how and where to build and store, on wiki page
+link:techpub[] / link:file:techpubs.asciidoc[]
+(TBD: fix so that works both checked out as file: links and on GitHub wiki).
+
+==== Locations
+
+You may be reading this in any of several different places:
+
+===== On GitHub - Official
+
+** This document's source files (mostly asciidoc) on its Github repository wiki:
+
+ *** https://github.com/riscv/riscv-CMOs/wiki
+ *** top of document: https://github.com/riscv/riscv-CMOs/wiki/{docname}
+   **** this is a .asciidoc file, rendered by GitHub's wiki
+   **** asciidoc includes link to other parts of the document
+   **** the wiki contains other pages, not part of the document, some of which provide more background
+
+** Generated HTML and PDF files on GitHub:
+
+   *** https://github.com/riscv/riscv-CMOs/
+     **** HTML: https://github.com/riscv/riscv-CMOs/blob/master/Ri5-CMOs-proposal.html
+         ***** displays raw, does not render
+     **** PDF: https://github.com/riscv/riscv-CMOs/blob/master/Ri5-CMOs-proposal.pdf
+        ***** displays - in GitHub's ugly way
+   *** https://github.com/riscv/riscv-CMOs/wiki
+     **** PDF: https://github.com/riscv/riscv-CMOs/wiki/Ri5-CMOs-proposal.pdf
+        ***** downloads, does not display
+     **** HTML: https://github.com/riscv/riscv-CMOs/wiki/Ri5-CMOs-proposal.html
+        ***** displays raw, does not render
+
+
+
+===== On GitHub - Original
+
+TBD: remove these references when official locations fully verified
+
+Originally written in author's personal GitHub repo+wiki:
+
+** This document's source files (mostly asciidoc) on its Github repository wiki:
+
+ *** https://github.com/AndyGlew/Ri5-stuff/wiki
+ *** top of document: https://github.com/AndyGlew/Ri5-stuff/wiki/{docname}
+   **** this is a .asciidoc file, rendered by GitHub's wiki
+   **** asciidoc includes link to other parts of the document
+   **** the wiki contains other pages, not part of the document, some of which provide more background
+
+** Generated HTML and PDF files on GitHub:
+
+   *** https://github.com/AndyGlew/Ri5-stuff/
+     **** HTML: https://github.com/AndyGlew/Ri5-stuff/blob/master/Ri5-CMOs-proposal.html
+         ***** displays raw, does not render
+     **** PDF: https://github.com/AndyGlew/Ri5-stuff/blob/master/Ri5-CMOs-proposal.pdf
+        ***** displays - in GitHub's ugly way
+   *** https://github.com/AndyGlew/Ri5-stuff/wiki
+     **** PDF: https://github.com/AndyGlew/Ri5-stuff/wiki/Ri5-CMOs-proposal.pdf
+        ***** downloads, does not display
+     **** HTML: https://github.com/AndyGlew/Ri5-stuff/wiki/Ri5-CMOs-proposal.html
+        ***** displays raw, does not render
+
+===== Local Workspace/clone
+
+* On your local system, where you may have cloned the GitHub parent and wiki repositories, and where you may have built the document:
+
+** local where built:
+  *** won't work from web
+  *** link:file:{docname}.html[]
+  *** link:file:{docname}.pdf[]
+  *** link:file:{docname}.asciidoc[]
+
+When and where converted (i.e. when asciidoctor was run, to generate this file):
+
+** docfile:  {docfile} - full path
+** localdatetime:  {localdatetime} - when generated
+** outfile:  {outfile} - full path of the output file
+** TBD: what system (PC, Linux system) was asciidoctor run on?
+
+Note: paths local to system document generated on are mostly meaningless to others,
+but have already been helpful finding source for orphaned drafts generated as PDF and HTML.

@@ -1,0 +1,31 @@
+# Makefile for Ri5-CMOs-proposal
+# in Ri5-stuff.wiki
+# https://github.com/AndyGlew/Ri5-stuff/wiki
+
+# this Makefile is now obsolete
+# and should be deleted.
+# It's functionality has been moved to
+# https://github.com/AndyGlew/Ri5-stuff/Makefile
+# where
+# https://github.com/AndyGlew/Ri5-stuff
+# gets https://github.com/AndyGlew/Ri5-stuff/wiki
+# as a submodule.
+
+
+
+# As of Wednesday, May 6, 2020-05-06
+# The main purpose is to run  a command to expand the AsciiDoc include  directives
+#  so that you can get a better idea what will actually look like
+
+HTML_VIEWER=/cygdrive/c/Windows/explorer.exe
+
+open-html-in-browser: Ri5-CMOs-proposal.html
+	# KLUGE: Windows HTML viewer does not understand / paths
+	# either need to convert / --> /, cd, or cygpath
+	$(HTML_VIEWER) Ri5-CMOs-proposal.html
+
+ASCIIDOCTOR=/home/glew/bin/asciidoctor
+#TBD: Move asciidoctor to standard location
+
+Ri5-CMOs-proposal.html: Ri5-CMOs-proposal.asciidoc
+	$(ASCIIDOCTOR) -b html Ri5-CMOs-proposal.asciidoc -o Ri5-CMOs-proposal.html

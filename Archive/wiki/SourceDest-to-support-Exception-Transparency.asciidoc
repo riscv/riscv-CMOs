@@ -1,0 +1,26 @@
+=== *_Source/dest_* to support *_exception transparency_*
+
+This instruction family is *_restartable after partial
+completion_*. E.g. on an exception such as a page fault or debug
+address breakpoint the output register RD is set to the data address
+of the exception, and since the instruction is *_source/dest_*, with
+the register numbers in RD and RS1 required to be the same, returning
+from the exception to the CMO.UR instruction will pick up execution
+where it left off.
+
+[NOTE]
+.Rationale: source/dest by requiring RD=RS1
+====
+This proposal has chosen to implement *_source/dest_* by
+requiring separate register fields RD and RS1 to contain the same
+value. An alternative was to make register field RD both an input and
+an output, allowing RS1 and RS2 to be used for other inputs. Separate
+RD=RS1 source/dest is more natural for a RISC instruction decoder, and
+detecting RD=RS1 has already been performed for other RISC-V
+instructions, e.g. in the V extension. However separate RD=RS1
+"wastes" instruction encodings by making RD!=RS1 illegal, and leaves
+no register free in the CMO.VAR instruction format for any 3rd operand such as the CMO type, hence
+requiring .<cmo_specifier> in the instruction encoding.
+
+TBD: see *_who cares about RD=RS1 source/dest?_*
+====
