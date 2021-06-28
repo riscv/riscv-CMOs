@@ -1,0 +1,257 @@
+== Formats
+
+=== CSRs
+
+*_FIXME_*: How is this extension disabled?
+
+Four CSRs control execution of CMO instructions:
+
+* `mcmocontrol`
+* `scmocontrol`
+* `hcmocontrol`
+* `vscmocontrol`
+
+****
+_The `scmocontrol` and `vscmocontrol` registers are both required to 
+distinguish CMO execution behavior when the effective privilege mode is U-mode 
+or VU-mode, respectively._
+_These registers are only present if the H-extension is implemented and 
+enabled._
+****
+
+Each `xcmocontrol` register has the following generic format:
+
+.Generic Format for xcmocontrol CSRs
+[cols="^1,^1,1a"]
+[%autowidth]
+|===
+| Bits    | Name     | Description
+
+| [0]     | `CBME`   | Cache Block Management instruction Enable
+
+Determines the behavior of a cache block management instruction (i.e. 
+`CBO.INVAL`, `CBO.CLEAN`, or `CBO.FLUSH`) when the instruction is executed in 
+_privilege_mode_.
+
+* `0`: The instruction takes an illegal instruction exception
+* `1`: The instruction is executed
+
+| [1]     | `CBWE`   | Cache Block Write instruction Enable
+
+Determines the behavior of a cache block write instruction (i.e. `CBO.ZERO`) 
+when the instruction is executed in _privilege_mode_.
+
+* `0`: The instruction takes an illegal instruction exception
+* `1`: The instruction is executed
+
+| [7:2]   | _Rsvd_   | _Reserved_
+
+| [8]     | `INVW0I` | `CBO.INVAL` access without write permission performs an 
+Invalidate operation
+
+Determines the operation performed by a `CBO.INVAL` instruction when the 
+resulting access _has not been_ granted write permission in the effective 
+privilege mode (_Wx_=`W0`) and when the instruction does _not_ raise an 
+exception:
+
+* `0`: The instruction performs a flush operation
+* `1`: The instruction performs an invalidate operation
+
+| [9]     | `INVW0E` | `CBO.INVAL` access without write permission Enable
+
+Determines the behavior of a `CBO.INVAL` instruction when a 
+_protection_mechanism_ is enabled and the resulting access _has not been_ 
+granted write permission in the effective privilege mode (_Wx_=`W0`):
+
+* `0`: The instruction takes an exception (page fault, guest-page fault, or 
+  access fault depending on the CSR)
+* `1`: The instruction performs an operation based on `INVW0I`
+
+| [10]    | `INVW1I` | `CBO.INVAL` access with write permission performs an 
+Invalidate operation
+
+Determines the operation performed by a `CBO.INVAL` instruction when the 
+resulting access _has been_ granted write permission in the effective privilege 
+mode (_Wx_=`W1`) and when the instruction does _not_ raise an exception:
+
+* `0`: The instruction performs a flush operation
+* `1`: The instruction performs an invalidate operation
+
+| [11]    | `INVW1E` | `CBO.INVAL` access with write permission Enable
+
+Determines the behavior of a `CBO.INVAL` instruction when a 
+_protection_mechanism_ is enabled and the resulting access _has been_ granted 
+write permission in the effective privilege mode (_Wx_=`W1`):
+
+* `0`: The instruction takes an exception (page fault, guest-page fault, or 
+  access fault depending on the CSR)
+* `1`: The instruction performs an operation based on `INVW1I`
+
+| [x:12]  | _Rsvd_   | _Reserved_
+|===
+
+Each `xcmocontrol` register is WARL, where CSR reads return the behaviors 
+supported by the implementation.
+
+The following subsections detail how the `xcmocontrol` CSRs govern the 
+execution of CMO instructions.
+
+==== Determining Illegal Instruction Exceptions
+
+The descriptions for the `CBME` and `CBWE` bits in the `xcmocontrol` registers 
+include a _privilege_mode_ parameter that corresponds to the privilege modes 
+controlled by a given CSR. Each CSR defines this parameter as follows:
+
+* For `mcmocontrol`, _privilege_mode_ corresponds to S/HS-mode, U-mode, 
+  VS-mode, and VU-mode
+* For `scmocontrol`, _privilege_mode_ corresponds to U-mode
+* For `hcmocontrol`, _privilege_mode_ corresponds to VS-mode and VU-mode
+* For `vscmocontrol`, _privilege_mode_ corresponds to VU-mode
+
+Depending on the _current privilege mode_, a cache block management instruction 
+takes an illegal instruction exception based on the `CBME` bits:
+
+* M-mode: +
+  `FALSE` (cache block management instructions never take illegal instruction 
+  exceptions)
+* S/HS-mode: +
+  `!mcmocontrol.CBME`
+* U-mode: +
+  `!mcmocontrol.CBME || !scmocontrol.CBME`
+* VS-mode: +
+  `!mcmocontrol.CBME || !hcmocontrol.CBME`
+* VU-mode: +
+  `!mcmocontrol.CBME || !hcmocontrol.CBME || !vscmocontrol.CBME`
+
+Depending on the _current privilege mode_, a cache block write instruction 
+takes an illegal instruction exception based on the `CBWE` bits:
+
+* M-mode: +
+  `FALSE` (cache block write instructions never take illegal instruction 
+  exceptions)
+* S/HS-mode: +
+  `!mcmocontrol.CBWE`
+* U-mode: +
+  `!mcmocontrol.CBWE || !scmocontrol.CBWE`
+* VS-mode: +
+  `!mcmocontrol.CBWE || !hcmocontrol.CBWE`
+* VU-mode: +
+  `!mcmocontrol.CBWE || !hcmocontrol.CBWE || !vscmocontrol.CBWE`
+
+Otherwise, the above instructions are executed in the _current privilege mode_.
+
+==== Determining Page Fault, Guest-Page Fault, and Access Fault Exceptions
+
+The descriptions for the `INVWxE` and `INVWxI` bits in the `xcmocontrol` 
+registers include a _protection_mechanism_ parameter that corresponds to the 
+protection mechanism that determines write permission for an access and a 
+_Wx_ parameter that represents whether write permission has been granted (`W1`) 
+or not (`W0`).
+Each CSR defines these as follows:
+
+* For `mcmocontrol`, _protection_mechanism_ corresponds to the PMP and PMAs 
+  and _Wx_ corresponds to whether partial joint write permission has been 
+  granted by the PMP and PMAs
+* For `scmocontrol`, _protection_mechanism_ corresponds to the `satp` page 
+  table and _Wx_ corresponds to whether write permission has been granted by 
+  the leaf PTE `W` bit
+* For `hcmocontrol`, _protection_mechanism_ corresponds to the `hgatp` page 
+  table and _Wx_ corresponds to whether write permission has been granted by 
+  the leaf PTE `W` bit
+* For `vscmocontrol`, _protection_mechanism_ corresponds to the `vsatp` page 
+  table and _Wx_ corresponds to whether write permission has been granted by 
+  the leaf PTE `W` bit
+
+For each CSR, the resulting `INVWxE` value is determined by the designated 
+_protection_mechanism_, which selects the `INVW0E` bit if _Wx_=`W0` or the 
+`INVW1E` bit if _Wx_=`W1`.
+Depending on the _effective privilege mode_, a `CBO.INVAL` instruction takes 
+the following types of traps based on the `INVWxE` values:
+
+* M-mode:
+  **  _N/A_ (`CBO.INVAL` never faults due to the CMO control registers)
+* S/HS-mode:
+  ** Access fault: +
+    `!(mcmocontrol.INVWxE)`
+* U-mode:
+  ** Page fault: +
+    `!(scmocontrol.INVWxE || satp.MODE==Bare)`
+  ** Access fault: +
+    `(scmocontrol.INVWxE || satp.MODE==Bare) &&` +
+    `!(mcmocontrol.INVWxE)`
+* VS-mode:
+  ** Guest-page fault: +
+    `!(hcmocontrol.INVWxE || hgatp.MODE==Bare)`
+  ** Access fault: +
+    `(hcmocontrol.INVWxE || hgatp.MODE==Bare) &&` +
+    `!(mcmocontrol.INVWxE)`
+* VU-mode:
+  ** Page fault: +
+    `!(vscmocontrol.INVWxE || vsatp.MODE==Bare)`
+  ** Guest-page fault: +
+    `(vscmocontrol.INVWxE || vsatp.MODE==Bare) &&` +
+    `!(hcmocontrol.INVWxE || hgatp.MODE==Bare)`
+  ** Access fault: +
+    `(vscmocontrol.INVWxE || vsatp.MODE==Bare) &&` +
+    `(hcmocontrol.INVWxE || hgatp.MODE==Bare) &&` +
+    `!(mcmocontrol.INVWxE)`
+
+****
+_The above exception priorities reflect the architected exception priorities in 
+the privileged architecture specification._
+****
+
+For each CSR, the resulting `INVWxI` value is determined by the designated 
+_protection_mechanism_, which selects the `INVW0I` bit if _Wx_=`W0` or the 
+`INVW1I` bit if _Wx_=`W1`, if that protection mechanism is enabled.
+If the protection mechanism is disabled, the `INVWxI` value is the logical AND 
+of the `INVW0I` bit and the `INVW1I` bit, i.e. both bits _must_ be set to 
+perform an invalidate operation.
+Assuming that no exception arises and depending on the 
+_effective privilege mode_, a `CBO.INVAL` instruction performs the following 
+operations based on the `INVWxI` values:
+
+* M-mode:
+  ** Flush: +
+  `FALSE` (`CBO.INVAL` never performs a flush operation)
+  ** Invalidate: +
+  `TRUE` (`CBO.INVAL` always performs an invalidate operation)
+* S-mode:
+  ** Flush: +
+    `!(mcmocontrol.INVWxI)`
+  ** Invalidate: +
+    `(mcmocontrol.INVWxI)`
+* U-mode:
+  ** Flush: +
+    `!(scmocontrol.INVWxI && mcmocontrol.INVWxI)`
+  ** Invalidate: +
+    `(scmocontrol.INVWxI && mcmocontrol.INVWxI)`
+* VS-mode:
+  ** Flush: +
+    `!(hcmocontrol.INVWxI && mcmocontrol.INVWxI)`
+  ** Invalidate: +
+    `(hcmocontrol.INVWxI && mcmocontrol.INVWxI)`
+* VU-mode:
+  ** Flush: +
+    `!(vscmocontrol.INVWxI && hcmocontrol.INVWxI && mcmocontrol.INVWxI)`
+  ** Invalidate: +
+    `(vscmocontrol.INVWxI && hcmocontrol.INVWxI && mcmocontrol.INVWxI)`
+
+****
+_Until a modified cache block has updated memory, a `CBO.INVAL` instruction may
+expose stale data values in memory if the CSRs are programmed to perform an 
+invalidate operation._
+_This behavior may result in a security hole if lower privileged level software 
+performs an invalidate operation and accesses sensitive information in memory._
+_To avoid such holes, higher privileged level software must perform either a 
+clean or flush operation on the cache block before permitting lower privileged 
+level software to perform an invalidate operation on the block._
+
+_Alternatively, higher privileged level software may program the CSRs so that 
+`CBO.INVAL` either traps or performs a flush operation in a lower privileged 
+level._
+_The W0 and W1 bits allow higher privileged software finer-grained control of 
+the behavior of `CBO.INVAL` in lower privilege levels based on whether write 
+permission has been granted to that level by a particular protection 
+mechanism._
+****
