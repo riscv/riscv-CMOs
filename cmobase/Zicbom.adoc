@@ -1,0 +1,29 @@
+[#Zicbom,reftext="Cache Block Management Operations"]
+=== Cache Block Management Operations
+
+The following instructions comprise the Zicbom extension:
+
+[%header,cols="^1,^1,4,8"]
+|===
+|RV32
+|RV64
+|Mnemonic
+|Instruction
+
+|&#10003;
+|&#10003;
+|cbo.clean.ea _rs_
+|<<#insns-cbo_clean>>
+
+|&#10003;
+|&#10003;
+|cbo.flush.ea _rs_
+|<<#insns-cbo_flush>>
+
+|&#10003;
+|&#10003;
+|cbo.invalidate.ea _rs_
+|<<#insns-cbo_inval>>
+
+|===
+

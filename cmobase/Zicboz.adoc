@@ -1,0 +1,19 @@
+[#Zicboz,reftext="Cache Block Zero Operations"]
+=== Cache Block Zero Operations
+
+The following instructions comprise the Zicboz extension:
+
+[%header,cols="^1,^1,4,8"]
+|===
+|RV32
+|RV64
+|Mnemonic
+|Instruction
+
+|&#10003;
+|&#10003;
+|cbo.zero.ea _rs_
+|<<#insns-cbo_zero>>
+
+|===
+
