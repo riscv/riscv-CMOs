@@ -1,0 +1,18 @@
+
+== Extensions
+
+The cache-management operations are provided by the following extensions:
+
+* <<#Zicbom>>
+* <<#Zicboz>>
+
+Cache block management instructions operate on the cache blocks containing the effective address specified in _rs_.
+These instructions also specify a _PoC_ that, along with the coherence PMA, determines the set of caches on which the operation is performed.
+
+In particular, the set of caches consists of one of the following:
+
+* If the coherence PMA indicates that hardware enforces coherence on the physical address, all the caches accessed by the hart directly and indirectly in the coherence domains on the path from the hart to the _PoC_
+* If the coherence PMA indicates that hardware does _not_ enforce coherence on the physical address, only the caches accessed by the hart directly on the path from the hart to the _PoC_
+
+include::Zicbom.adoc[]
+include::Zicboz.adoc[]
