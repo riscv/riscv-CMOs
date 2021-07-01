@@ -1,6 +1,10 @@
 [#Zicboz,reftext="Cache Block Zero Operations"]
 === Cache Block Zero Operations
 
+Cache block zero operations perform a series of byte-sized store operations
+where the data are zero. An implementation may or may not update the entire
+cache block atomically.
+
 The following instructions comprise the Zicboz extension:
 
 [%header,cols="^1,^1,4,8"]
@@ -12,8 +16,7 @@ The following instructions comprise the Zicboz extension:
 
 |&#10003;
 |&#10003;
-|cbo.zero.ea _rs_
+|cbo.zero _rs_
 |<<#insns-cbo_zero>>
 
 |===
-

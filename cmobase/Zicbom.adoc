@@ -1,6 +1,23 @@
 [#Zicbom,reftext="Cache Block Management Operations"]
 === Cache Block Management Operations
 
+Cache block management operations enable software running on a set of coherent
+observers to communicate with a set of non-coherent observers:
+
+* An _invalidate operation_ makes store operations from a set of non-coherent
+  observers appear to the set of coherent observers by removing all copies of a
+  cache block from the coherent caches
+* A _clean operation_ makes store operations from the set of coherent observers
+  appear to a set of non-coherent observers by performing a write operation of
+  a copy of a cache block to the underlying memory locations (or to a cache
+  shared by both sets), provided a coherent observer performed a store operation
+  to the cache block since the previous such write operation
+* A _flush operation_ atomically performs a clean operation followed by an
+  invalidate operation
+
+*_FIXME:_* There is some question whether the two sub-operations in a flush
+operation must be atomic.
+
 The following instructions comprise the Zicbom extension:
 
 [%header,cols="^1,^1,4,8"]
@@ -12,18 +29,17 @@ The following instructions comprise the Zicbom extension:
 
 |&#10003;
 |&#10003;
-|cbo.clean.ea _rs_
+|cbo.clean _rs_
 |<<#insns-cbo_clean>>
 
 |&#10003;
 |&#10003;
-|cbo.flush.ea _rs_
+|cbo.flush _rs_
 |<<#insns-cbo_flush>>
 
 |&#10003;
 |&#10003;
-|cbo.invalidate.ea _rs_
+|cbo.inval _rs_
 |<<#insns-cbo_inval>>
 
 |===
-

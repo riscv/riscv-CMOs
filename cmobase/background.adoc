@@ -1,0 +1,100 @@
+== Background
+
+This chapter provides information common to all CMO extensions.
+
+=== Memory and Caches
+
+A _memory location_ is a physical resource in a system uniquely identified by a
+_physical address_. The _observers_ of a given memory location consist of the
+RISC-V harts or I/O devices that can access that memory location. A given
+observer may not be able to access all memory locations in a system, and two
+different harts or devices may or may not be able to observe the same sets of
+memory locations.
+
+The physical address for a memory location may be specified by an observer
+directly or may be obtained from an effective address via various translation
+mechanisms.
+
+In this specification, a _load operation_ (or _store operation_) is performed by
+an observer to consume (or modify) the data at a given memory location. For a
+RISC-V hart, a load or store operation may be performed as a result of an
+explicit or implicit memory access. Additionally, a _read operation_ (or _write
+operation_) is an operation performed on the memory location to fetch (or
+update) the data at the physical resource.
+
+****
+
+_Load and store operations are decoupled from read and write operations by
+caches, described below. For example, a load operation may be satisfied by a
+cache without performing a read operation in memory, or a store operation may be
+satisfied by a cache that first performs a read operation._
+
+****
+
+A _cache_ is a structure that buffers copies of data to reduce average memory
+latency. Any number of caches may be interspersed between an observer and a
+memory location, and load and store operations from an observer may be satisfied
+by a cache instead of the memory location.
+
+Caches organize copies of data into _cache blocks_, each of which represents a
+contiguous, naturally aligned power-of-two (or _NAPOT_) range of memory
+locations. A cache block is identified by a physical address corresponding to
+the underlying memory locations. A _cache block operation_ (or _CBO_) operates
+on one or more cache blocks.
+
+The capacity and organization of a cache and the size of a cache block are both
+_implementation-defined_, and the execution environment provides software a
+means to discover information about the caches and cache blocks in a system. For
+the initial base set of CBOs, the size of a cache block shall be uniform
+throughout the system.
+
+****
+
+_In future CMO extensions, the requirement for a uniform cache block size will
+be relaxed._
+
+****
+
+=== Coherent Observers
+
+For a given memory location, a _set of coherent observers_ consists of the set
+of observers for which all of the following hold without software intervention:
+
+* Store operations from all observers in the set appear to be serialized with
+  respect to each other
+* Store operations from all observers in the set eventually appear to all other
+  observers in the set
+* A load operation from an observer in the set returns data from a store
+  operation from an observer in the set (or from the initial data in memory)
+
+The coherent observers within such a set shall access a given memory location
+with the same physical address and the same physical memory attributes,
+particularly coherence and cacheability.
+
+An observer who is a member of a set of coherent observers is said to be
+_coherent_ with respect to the other observers in the set. On the other hand, an
+observer who is _not_ a member is said to be _non-coherent_ with respect to the
+observers in the set.
+
+Caches introduce multiple copies of a given cache block, and the copies accessed
+by the coherent observers are kept coherent by an _implementation-defined_
+mechanism. A _coherent cache_ may allocate a copy of the cache block at any
+time, obtaining a copy from another coherent cache or from the underlying memory
+locations by performing a read operation. Similarly, a coherent cache may
+deallocate a copy of the cache block at any time, transferring a copy to another
+coherent cache. Additionally, a coherent cache may transfer a copy of the cache
+block to the underlying memory locations at any time by performing a write
+operation, provided that a coherent observer performed a store operation to the
+cache block since the previous such write operation. In the absence of an
+invalidate operation performed by a coherent observer (see <<#Zicbom>>), at
+least one coherent cache shall write the cache block to the underlying memory
+locations if a coherent observer performed a store operation to the cache block;
+otherwise, no coherent cache may perform a write operation of the cache block to
+the underlying memory locations.
+
+****
+
+_The above restrictions ensure that a "clean" copy cannot be written back into
+memory._
+
+****

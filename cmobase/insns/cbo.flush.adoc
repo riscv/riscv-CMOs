@@ -1,11 +1,11 @@
 [#insns-cbo_flush,reftext="Cache-block flush (effective address)"]
-=== cbo.flush.ea
+=== cbo.flush
 
 Synopsis::
-Flush a cache-block (at effective address)
+Perform a flush operation on the cache block containing the effective address
 
 Mnemonic::
-cbo.flush.ea _rs_
+cbo.flush _rs_
 
 Encoding::
 [wavedrom, , svg]
@@ -15,12 +15,13 @@ Encoding::
 	{ bits: 5,  name: 0x0 },
 	{ bits: 3,  name: 0x2,   attr: ['CBO'] },
 	{ bits: 5,  name: 'rs' },
-	{ bits: 12, name: 0x002, attr: ['CBO.FLUSH.EA'] },
+	{ bits: 12, name: 0x002, attr: ['CBO.FLUSH'] },
 ]}
 ....
 
 Description::
-A *cbo.flush.ea* instruction performs a flush operation on the set of caches determined by the PoC and the coherence PMA.
+A *cbo.flush* instruction performs a flush operation on the set of coherent
+caches accessed by the observer executing the instruction.
 
 Operation::
 [source,sail]
