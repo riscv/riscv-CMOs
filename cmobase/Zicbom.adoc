@@ -18,6 +18,24 @@ observers to communicate with a set of non-coherent observers:
 *_FIXME:_* There is some question whether the two sub-operations in a flush
 operation must be atomic.
 
+In the Zicbom extension, the instructions operate to a point where store
+operations are visible to all observers in the system. In other words, an
+invalidate operation ensures that store operations from all non-coherent
+observers appear to observers in the set of coherent observers, and a clean
+operation ensures that store operations from coherent observers appear to all
+non-coherent observers.
+
+****
+
+_The Zicbom extension does not prohibit observers that fall outside of the above
+architectural definition; however, software cannot rely on the defined cache
+operations to have the desired effects with respect to those observers._
+
+_Future extensions may define different sets of observers for performance
+optimization._
+
+****
+
 The following instructions comprise the Zicbom extension:
 
 [%header,cols="^1,^1,4,8"]

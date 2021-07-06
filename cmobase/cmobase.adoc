@@ -36,6 +36,7 @@ endif::[]
 :stem:
 :footnote:
 :xrefstyle: short
+:csrname: cmocontrol
 
 // Front-Matters
 include::colophon.adoc[]
@@ -49,9 +50,7 @@ The semantics of each instruction in <<#insns>> is expressed in a SAIL-like synt
 // Main text
 include::introduction.adoc[]
 include::background.adoc[]
-include::extra.adoc[]
-include::formats.adoc[]
-
+include::csr_state.adoc[]
 include::instructions_by_extension.adoc[]
 
 [#insns,reftext="Instructions (in alphabetical order)"]
