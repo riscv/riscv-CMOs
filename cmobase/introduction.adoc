@@ -1,29 +1,33 @@
+[#intro,reftext="Introduction"]
 == Introduction
 
 _Cache management operation_ (or _CMO_) instructions perform operations on
-caches in the memory hierarchy. These instructions are classified by operation
-into the following instruction types:
+cached copies of data in the memory hierarchy. These instructions are grouped by
+operation into the following instruction classes:
 
-* A _management_ instruction manipulates the contents of caches
-* A _zero_ instruction writes zeros to a range of memory locations, potentially
-  allocating a cache block in one or more caches
-* A _prefetch_ instruction indicates to a cache that data at a given memory
-  location may be accessed in the near future, potentially allocating a cache 
-  block in one or more caches
+* A _management_ instruction manipulates cached copies of data with respect to
+  sets of observers
+* A _zero_ instruction zeros out a range of memory locations, potentially
+  allocating cached copies of data in one or more caches
+* A _prefetch_ instruction indicates to hardware that data at a given memory
+  location may be accessed in the near future, potentially allocating cached
+  copies of data in one or more caches
 
-This document defines a base set of CMO ISA extensions that operate specifically
-on cache blocks. Each extension defines one of the above classes of
-instructions:
+This document introduces a base set of CMO ISA extensions that operate
+specifically on cache blocks. Each of the above classes of instructions
+represents an extension in this specification:
 
-* _Zicbom_ defines a set of cache block management instructions, i.e.
+* The _Zicbom_ extension defines a set of cache block management instructions:
   `CBO.INVAL`, `CBO.CLEAN`,  and `CBO.FLUSH`
-* _Zicboz_ defines a cache block zero instruction, i.e. `CBO.ZERO`
-* _Zicbop_ defines a set of cache block prefetch instructions, i.e.
+* The _Zicboz_ extension defines a cache block zero instruction: `CBO.ZERO`
+* The _Zicbop_ extension defines a set of cache block prefetch instructions:
   `PREFETCH.R`, `PREFETCH.W`, and `PREFETCH.I`
 
-The execution behavior of the above instructions may be controlled by CSR state
-and the various memory translation mechanisms. Additional details are provided
-in the following chapters.
+The execution behavior of the above instructions is also modified by CSR state
+added by this specification.
+
+The remainder of this document provides general background information on CMO
+instructions and describes each of the above ISA extensions.
 
 ****
 

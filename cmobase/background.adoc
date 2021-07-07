@@ -1,3 +1,4 @@
+[#background,reftext="Background"]
 == Background
 
 This chapter provides information common to all CMO extensions.
@@ -8,7 +9,7 @@ A _memory location_ is a physical resource in a system uniquely identified by a
 _physical address_. The _observers_ of a given memory location consist of the
 RISC-V harts or I/O devices that can access that memory location. A given
 observer may not be able to access all memory locations in a system, and two
-different harts or devices may or may not be able to observe the same sets of
+different harts or devices may or may not be able to observe the same set of
 memory locations.
 
 The physical address for a memory location may be specified by an observer
@@ -39,8 +40,13 @@ by a cache instead of the memory location.
 Caches organize copies of data into _cache blocks_, each of which represents a
 contiguous, naturally aligned power-of-two (or _NAPOT_) range of memory
 locations. A cache block is identified by a physical address corresponding to
-the underlying memory locations. A _cache block operation_ (or _CBO_) operates
-on one or more cache blocks.
+the underlying memory locations, and a _cache block operation_ (or _CBO_)
+operates on one or more cache blocks.
+
+Like an operation on a memory location, a read operation may be performed on a
+cache to fetch a copy of a cache block, and a write operation may be performed
+on a cache to update a copy of a cache block. In effect, read and write
+operations transfer copies of cache blocks among caches and memory.
 
 The capacity and organization of a cache and the size of a cache block are both
 _implementation-defined_, and the execution environment provides software a
@@ -50,8 +56,8 @@ throughout the system.
 
 ****
 
-_In future CMO extensions, the requirement for a uniform cache block size will
-be relaxed._
+_In future CMO extensions, the requirement for a uniform cache block size may be
+relaxed._
 
 ****
 
@@ -82,15 +88,16 @@ mechanism. A _coherent cache_ may allocate a copy of the cache block at any
 time, obtaining a copy from another coherent cache or from the underlying memory
 locations by performing a read operation. Similarly, a coherent cache may
 deallocate a copy of the cache block at any time, transferring a copy to another
-coherent cache. Additionally, a coherent cache may transfer a copy of the cache
-block to the underlying memory locations at any time by performing a write
-operation, provided that a coherent observer performed a store operation to the
-cache block since the previous such write operation. In the absence of an
-invalidate operation performed by a coherent observer (see <<#Zicbom>>), at
-least one coherent cache shall write the cache block to the underlying memory
-locations if a coherent observer performed a store operation to the cache block;
-otherwise, no coherent cache may perform a write operation of the cache block to
-the underlying memory locations.
+coherent cache by performing a write operation. Additionally, a coherent cache
+may transfer a copy of the cache block to the underlying memory locations at any
+time by performing a write operation, provided that a coherent observer
+performed a store operation to the cache block since the previous write
+operation to the memory locations. In the absence of an invalidate operation
+performed by a coherent observer (see <<#Zicbom>>), at least one coherent cache
+shall write the cache block to the underlying memory locations if a coherent
+observer performed a store operation to the cache block; otherwise, no coherent
+cache may perform a write operation of the cache block to the underlying memory
+locations.
 
 ****
 
@@ -106,8 +113,6 @@ memory._
 The preserved program order (abbreviated _PPO_) rules are defined by the RVWMO
 memory ordering model. How the operations resulting from CMO instructions fit
 into these rules is described below.
-
-===== Cache Block Management Instructions
 
 For cache block management instructions, the resulting invalidate, clean, and
 flush operations behave as stores in the PPO rules subject to one additional
@@ -130,15 +135,11 @@ Additionally, invalidate, clean, and flush operations are classified as W or O
 addresses) for the purposes of predecessor and successor sets in `FENCE`
 instructions.
 
-===== Cache Block Zero Instructions
-
 For cache block zero instructions, the resulting store operations simply 
 behave as stores in the PPO rules.
 
-===== Cache Block Prefetch Instructions
-
-As cache block prefetch instructions do not modify architectural memory state,
-the resulting operations are _not_ ordered by the PPO rules.
+Finally, as cache block prefetch instructions do not modify architectural memory
+state, the resulting operations are _not_ ordered by the PPO rules.
 
 ==== Load Values (FIXME)
 
@@ -148,133 +149,123 @@ Axiom:
 
 [start=3]
 . If an invalidate precedes _i_ in program order and operates on a byte, and no 
-store to that byte appears in program order or in the global memory order 
-between the invalidate and _i_, the load value is _implementation-defined_
-
-****
-What does global memory order mean for software managed coherence:
-
-* Can describe global to mean "global" for all agents and domains (single universe)
-* Can describe global to mean "global" for some agents and domains (a multiverse)
-
-The above definition is written using a multiverse definition for global memory
-order. A single universe definition would constrain the result to orders that
-could be produced by other agents. Maybe...?
-****
+  store to that byte appears in program order or in the global memory order 
+  between the invalidate and _i_, the load value is _implementation-defined_
 
 === Traps
 
 ==== Illegal Instruction and Virtual Instruction Exceptions
 
-Cache block management instructions and cache block write instructions may take 
-an illegal instruction exception depending on the _current privilege mode_ and 
-the state of the CMO control registers described in the <<_csrs>> section.
-The current privilege mode refers to the privilege mode of the hart at the time 
+Cache block management instructions and cache block zero instructions may take
+an illegal instruction exception depending on the _current privilege mode_ and
+the state of the CMO control registers described in the <<#csr_state>> section.
+The current privilege mode refers to the privilege mode of the hart at the time
 the instruction is executed.
 
-Cache block hint instructions do _not_ take illegal instruction exceptions.
+Cache block prefetch instructions do _not_ take illegal instruction exceptions.
 
 Additionally, CMO instructions do _not_ take virtual instruction exceptions.
 
 ==== Page Fault and Guest-Page Fault Exceptions
 
-During address translation, CMO instructions may take a page fault depending on 
-the type of instruction, the _effective privilege mode_ (as determined by the 
-`MPRV`, `MPV`, and `MPP` bits in `mstatus`) of the resulting access, and the 
-permissions granted by the page table entry (PTE).
-If two-stage address translation is enabled, CMO instructions may also take a 
-guest-page fault.
+During address translation, CMO instructions may take a page fault depending on
+the type of instruction, the _effective privilege mode_ (as determined by the
+`MPRV`, `MPV`, and `MPP` bits in `mstatus`) of the resulting access, and the
+permissions granted by the page table entry (PTE). If two-stage address
+translation is enabled, CMO instructions may also take a guest-page fault.
 
-Cache block management instructions require a valid translation (`V=1`) and 
-either read (`R=1`) or execute (`X=1`) permission and, if applicable, user 
-access (`U=1`) in the effective privilege mode.
-If these conditions are _not_ met, the instruction takes a store/AMO page fault 
-exception.
-In addition, `CBO.INVAL` instructions may take a store/AMO page fault exception 
-depending on the state of the CMO control registers described in the <<_csrs>> 
-section and whether the access has been granted write permission by the PTE.
+Cache block management instructions require a valid translation (`V=1`) and
+either read (`R=1`) or execute (`X=1`) permission and, if applicable, user
+access (`U=1`) in the effective privilege mode. If the required conditions are
+_not_ met, the instruction takes a store/AMO page fault exception.
 
-Cache block write instructions require a valid translation (`V=1`) and write 
-(`W=1`) permission and, if applicable, user access (`U=1`) in the effective 
-privilege mode.
-If these conditions are _not_ met, the instruction takes a store/AMO page fault 
-exception.
+Cache block zero instructions require a valid translation (`V=1`) and write
+(`W=1`) permission and, if applicable, user access (`U=1`) in the effective
+privilege mode. If the required conditions are _not_ met, the instruction takes
+a store/AMO page fault exception.
 
 If G-stage address translation is enabled, the above instructions take a 
 store/AMO guest-page fault if the G-stage PTE does _not_ allow the access.
 
-Cache block hint instructions require a valid translation (`V=1`) and either 
-read (`R=1`) or execute (`X=1`) permission and, if applicable, user access 
-(`U=1`) in the effective privilege mode.
-If these conditions are _not_ met, however, the instruction does _not_ take a 
-page fault or guest-page fault exception and retires without accessing memory.
+Cache block prefetch instructions require a valid translation (`V=1`) and either
+read (`R=1`) or execute (`X=1`) permission and, if applicable, user access
+(`U=1`) in the effective privilege mode. In addition, it is
+_implementation-defined_ whether any of the following are required to perform a
+memory access:
 
-FIXME: PREFETCH.W interacts with LR/SC; doesn't require W=1
+* `PREFETCH.R` requires read (`R=1`) permission
+* `PREFETCH.W` requires write (`W=1`) permission
+* `PREFETCH.I` requires execute (`X=1`) permission
+
+If the required conditions are _not_ met, however, the instruction does _not_
+take a page fault or guest-page fault exception and retires without performing a
+memory access.
 
 ===== Effect of other `xstatus` bits
 
-The `mstatus.MXR` bit (also `sstatus.MXR`) and the `vsstatus.MXR` bit do _not_ 
+The `mstatus.MXR` bit (also `sstatus.MXR`) and the `vsstatus.MXR` bit do _not_
 affect the execution of CMO instructions.
 
-The `mstatus.SUM` bit (also `sstatus.SUM`) and the `vsstatus.SUM` bit do _not_ 
-affect the execution of CMO instructions beyond modifying permissions for 
+The `mstatus.SUM` bit (also `sstatus.SUM`) and the `vsstatus.SUM` bit do _not_
+affect the execution of CMO instructions beyond modifying permissions for
 S/HS-mode and VS-mode accesses as specified by the privileged architecture.
 
 ==== Access Fault Exception
 
-A CMO instruction may take an access fault exception, as detailed in the 
-privileged architecture specification, that interrupts the address translation 
-process.
-Assuming the address translation process completes with a valid translation, a 
-CMO instruction may also take an access fault exception depending on the type 
-of instruction, the effective privilege mode of the resulting access, and the 
-permissions granted by the physical memory protection (PMP) unit and the 
-physical memory attributes (PMAs).
+A CMO instruction may take an access fault exception, as detailed in the
+privileged architecture specification, that interrupts the address translation
+process. Assuming the address translation process completes with a valid
+translation, a CMO instruction may also take an access fault exception depending
+on the type of instruction, the effective privilege mode of the resulting
+access, and the permissions granted by the physical memory protection (PMP) unit
+and the physical memory attributes (PMAs).
 
 ****
+
 _For now, we assume two things about PMAs:_
 
 . _PMAs are the same for all physical addresses in a cache block_
 . _Memory that can be cached cannot be write-only_
+
 ****
 
-Read (`R`), write (`W`), and execute (`X`) permissions are granted by the PMP 
-and the PMAs.
-Although the PMP may grant different permissions to different physical 
-addresses in a cache block, the PMAs for a cache block _must_ be the same for 
-_all_ physical addresses in the cache block and read permission _must_ be 
-granted if write permission has been granted.
-If these PMA constraints are _not_ met, the behavior of CMO instruction is 
-UNSPECIFIED.
+Read (`R`), write (`W`), and execute (`X`) permissions are granted by the PMP
+and the PMAs. Although the PMP may grant different permissions to different
+physical addresses in a cache block, the PMAs for a cache block shall be the
+same for _all_ physical addresses in the cache block and read permission shall
+be granted if write permission has been granted. If these PMA constraints are
+_not_ met, the behavior of a CMO instruction is UNSPECIFIED.
 
-For the purposes of access fault determination, _joint permission_ is granted 
-for a given physical address when the same access type is allowed by both the 
-PMP and the PMAs for that physical address.
-For example, joint read permission implies that both the PMP and PMAs allow 
-a read access.
-In addition, for a given cache block, _partial joint write permission_ implies 
-that joint write permission has been granted to only _some_ of the physical 
-addresses in the cache block, while _full joint write permission_ implies that 
-joint write permission has been granted to _all_ physical addresses in the 
-cache block.
+For the purposes of access fault determination, the following terms are defined
+for a given physical address:
 
-Cache block management instructions require either joint read or joint execute 
-permission for _all_ accessed physical addresses.
-If this condition is _not_ met, the instruction takes a store/AMO access fault 
-exception.
-In addition, `CBO.INVAL` instructions may take a store/AMO access fault 
-exception depending on the state of the CMO control registers described in the 
-<<_csrs>> section and whether the access has been granted partial joint write 
-permission by the PMP and PMAs.
+* _joint read permission_ is granted when both the PMP and PMAs allow read
+  access to the physical address
+* _joint write permission_ is granted when both the PMP and PMAs allow write
+  access to the physical address
+* _joint execute permission_ is granted when both the PMP and PMAs allow execute
+  access to the physical address
 
-Cache block write instructions require full joint write permission.
-If this condition is _not_ met, the instruction takes a store/AMO access fault 
+Cache block management instructions require either joint read permission or
+joint execute permission for each physical address in a cache block. If the
+required condition is _not_ met, the instruction takes a store/AMO access fault
 exception.
 
-Cache block hint instructions require either joint read or joint execute 
-permission for _all_ accessed physical addresses.
-If this condition is _not_ met, however, the instruction does _not_ take an 
-access fault exception and retires without accessing memory.
+Cache block zero instructions require joint write permission for each physical
+address in a cache block. If the required condition is _not_ met, the
+instruction takes a store/AMO access fault exception.
+
+Cache block prefetch instructions require either joint read permission or joint
+execute permission for each physical address in a cache block. In addition, it
+is _implementation-defined_ whether any of the following are required to perform
+a memory access:
+
+* `PREFETCH.R` requires joint read permission
+* `PREFETCH.W` requires joint write permission
+* `PREFETCH.I` requires joint execute permission
+
+If the required conditions are _not_ met, however, the instruction does _not_
+take an access fault exception and retires without performing a memory access.
 
 ==== Address Misaligned Exception
 
@@ -282,27 +273,36 @@ CMO instructions do _not_ generate address misaligned exceptions.
 
 ==== Breakpoint Exception
 
-CMO instructions may generate breakpoint exceptions (or may cause other debug 
-actions) subject to the general trigger module behaviors specified in the debug 
-architecture.
-When `type=2` (i.e. `mcontrol`), the behavior of a trigger for load and store 
-address matches is UNSPECIFIED for CMO instructions.
-When `type=6` (i.e. `mcontrol6`), the behavior of a trigger for load and store 
+CMO instructions may generate breakpoint exceptions (or may cause other debug
+actions) subject to the general trigger module behaviors specified in the debug
+architecture. When `type=2` (i.e. `mcontrol`), the behavior of a trigger for
+load and store address matches is UNSPECIFIED for CMO instructions. When
+`type=6` (i.e. `mcontrol6`), the behavior of a trigger for load and store
 address matches is based on the following classification of a CMO instruction:
 
 * A cache block management instruction is both a load and a store
-* A cache block write instruction is a store 
-* It is _implementation-defined_ whether a cache block hint instruction is both 
-  a load and a store or neither a load nor a store
+* A cache block zero instruction is a store 
+* It is _implementation-defined_ whether a cache block prefetch instruction is
+  both a load and a store or neither a load nor a store
 
 Load and store data matches for all CMO instructions are UNSPECIFIED.
 
 ****
-_An implementation may convert cache block hint instructions into NOPs prior to 
-executing the instruction. Load and store matches are not applicable in such an 
+
+_An implementation may convert cache block hint instructions into NOPs prior to
+executing the instruction. Load and store matches are not applicable in such an
 implementation._
 
 _For load and store address matches on a CMO effective address, software should 
 program the trigger to match on NAPOT ranges, i.e. `mcontrol6.match=1`, and 
 should program the NAPOT range to equal the cache block size._
+
 ****
+
+=== Effects on Constrained LR/SC Loops
+
+Executing a `CBO.INVAL`, `CBO.FLUSH`, `CBO.ZERO`, or `PREFETCH.W` instruction
+may cause a reservation on another hart to be lost. As a result, executing one
+of these instructions constitutes an additional event (like executing an
+unconditional store or AMO instruction) that satisfies the system forward
+progress requirements of constrained LR/SC loops.

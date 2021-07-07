@@ -1,0 +1,9 @@
+[#insns,reftext="Instructions"]
+== Instructions
+include::insns/cbo.clean.adoc[]
+<<<
+include::insns/cbo.inval.adoc[]
+<<<
+include::insns/cbo.flush.adoc[]
+<<<
+include::insns/cbo.zero.adoc[]

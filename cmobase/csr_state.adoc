@@ -1,6 +1,5 @@
+[#csr_state,reftext="Control and Status Register State"]
 == Control and Status Register State
-
-=== CSR Format
 
 Three CSRs control execution of CMO instructions:
 
@@ -19,11 +18,11 @@ switches._
 The `h{csrname}` register is only present if the H-extension is implemented and
 enabled.
 
-Each `x{csrname}` register has the following generic format:
+Each `x{csrname}` register (where `x` is `m`, `s`, or `h`) has the following
+generic format:
 
 .Generic Format for x{csrname} CSRs
-[cols="^1,^1,1a"]
-[%autowidth]
+[cols="^10,^10,80a"]
 |===
 | Bits    | Name     | Description
 
@@ -34,7 +33,8 @@ a lower privilege mode:
 
 * `00`: The instruction takes an illegal instruction exception
 * `01`: The instruction is executed and performs a flush operation
-* `10`: _Reserved_
+* `10`: _Reserved_ (implementations are expected, but not required, to treat
+  this value as `00`; however, software must not rely on this behavior)
 * `11`: The instruction is executed and performs an invalidate operation
 
 | [??]    | `CBCFE`  | Cache Block Clean and Flush instruction Enable
@@ -55,20 +55,32 @@ lower privilege mode:
 
 |===
 
-Depending on the _current privilege mode_, a cache block invalidate instruction
-executes or takes an illegal instruction exception based on the state of the
-`CBIE` bits:
+The x{csrname} registers control CMO instruction execution based on the _current
+privilege mode_ and the state of the appropriate CSRs, as detailed below.
+
+A cache block invalidate instruction executes or takes an illegal instruction
+exception based on the state of the `x{csrname}.CBIE` fields:
 
 [source,sail,subs="attributes+"]
 --
 
-if (((curr_priv_mode == S/HS) && m{csrname}.CBME) ||
-    ((curr_priv_mode == U)    && m{csrname}.CBME && s{csrname}.CBME) ||
-    ((curr_priv_mode == VS)   && m{csrname}.CBME && h{csrname}.CBME) ||
+// this pseudocode assumes the expected implementation of the reserved encoding
+if (((curr_priv_mode == S/HS) && m{csrname}.CBIE[0]) ||
+    ((curr_priv_mode == U)    && m{csrname}.CBIE[0] && s{csrname}.CBIE[0]) ||
+    ((curr_priv_mode == VS)   && m{csrname}.CBIE[0] && h{csrname}.CBIE[0]) ||
     ((curr_priv_mode == VU)   &&
-     m{csrname}.CBME && s{csrname}.CBME && h{csrname}.CBME))
+     m{csrname}.CBIE[0] && s{csrname}.CBIE[0] && h{csrname}.CBIE[0]))
 {
-  <execute CBO.CLEAN or CBO.FLUSH>
+  if (((curr_priv_mode == S/HS) && m{csrname}.CBIE[1]) ||
+      ((curr_priv_mode == U)    && m{csrname}.CBIE[1] && s{csrname}.CBIE[1]) ||
+      ((curr_priv_mode == VS)   && m{csrname}.CBIE[1] && h{csrname}.CBIE[1]) ||
+      ((curr_priv_mode == VU)   &&
+       m{csrname}.CBIE[1] && s{csrname}.CBIE[1] && h{csrname}.CBIE[1]))
+  {
+    <execute CBO.INVAL and perform an invalidate operation>
+  } else {
+    <execute CBO.INVAL and perform a flush operation
+  }
 }
 else
 {
@@ -83,7 +95,7 @@ _Until a modified cache block has updated memory, a `CBO.INVAL` instruction may
 expose stale data values in memory if the CSRs are programmed to perform an
 invalidate operation. This behavior may result in a security hole if lower
 privileged level software performs an invalidate operation and accesses
-sensitive information in memory.
+sensitive information in memory._
 
 _To avoid such holes, higher privileged level software must perform either a
 clean or flush operation on the cache block before permitting lower privileged
@@ -93,9 +105,8 @@ either traps or performs a flush operation in a lower privileged level._
 
 ****
 
-Depending on the _current privilege mode_, a cache block clean or flush
-instruction executes or takes an illegal instruction exception based on the
-state of the `CBCFE` bits:
+A cache block clean or flush instruction executes or takes an illegal
+instruction exception based on the state of the `x{csrname}.CBCFE` bits:
 
 [source,sail,subs="attributes+"]
 --
@@ -115,9 +126,8 @@ else
 
 --
 
-Depending on the _current privilege mode_, a cache block zero instruction
-executes or takes an illegal instruction exception based on the state of the
-`CBZE` bits:
+Finally, a cache block zero instruction executes or takes an illegal instruction
+exception based on the state of the `x{csrname}.CBZE` bits:
 
 [source,sail,subs="attributes+"]
 --
@@ -137,131 +147,5 @@ else
 
 --
 
-
-
-Each `x{csrname}` register is WARL, where CSR reads return the behaviors 
+Each `x{csrname}` register is WARL, where a CSR read returns the behaviors
 supported by the implementation.
-
-The following subsections detail how the `x{csrname}` CSRs govern the 
-execution of CMO instructions.
-
-==== Determining Illegal Instruction Exceptions
-
-
-
-
-==== Determining Page Fault, Guest-Page Fault, and Access Fault Exceptions
-
-****
-
-The following doesn't really work because W may be 0 in an effective privilege
-level due to any of the protection mechanisms appropriate to that level. (On the
-other hand, W=1 implies all protection mechanisms have W=1.) To distinguish the
-effects of different protection mechanisms, an implementation would have to keep
-track of the state of all the mechanisms. For example, if VS set W=1 for VU, but
-HS cleared W=0, the net result is W=0, but the s{csrname} register would be
-configured based on the behavior that VS wanted for its W state. The only way to
-ensure that result is to log the VS W state separately from the HS W state.
-
-Maybe something where
-
-* CBIE - 2b for invalidate (trap, flush, invalidate, reserved for future)
-* CBCFE - 1b for clean/flush
-* CBZE - 1b for zero
-
-****
-
-The descriptions for the `INVWxE` and `INVWxI` bits in the `xcmocontrol` 
-registers include a _protection_mechanism_ parameter that corresponds to the 
-protection mechanism that determines write permission for an access and a 
-_Wx_ parameter that represents whether write permission has been granted (`W1`) 
-or not (`W0`).
-Each CSR defines these as follows:
-
-* For `mcmocontrol`, _protection_mechanism_ corresponds to the PMP and PMAs 
-  and _Wx_ corresponds to whether partial joint write permission has been 
-  granted by the PMP and PMAs
-* For `scmocontrol`, _protection_mechanism_ corresponds to the `satp` page 
-  table and _Wx_ corresponds to whether write permission has been granted by 
-  the leaf PTE `W` bit
-* For `hcmocontrol`, _protection_mechanism_ corresponds to the `hgatp` page 
-  table and _Wx_ corresponds to whether write permission has been granted by 
-  the leaf PTE `W` bit
-* For `vscmocontrol`, _protection_mechanism_ corresponds to the `vsatp` page 
-  table and _Wx_ corresponds to whether write permission has been granted by 
-  the leaf PTE `W` bit
-
-For each CSR, the resulting `INVWxE` value is determined by the designated 
-_protection_mechanism_, which selects the `INVW0E` bit if _Wx_=`W0` or the 
-`INVW1E` bit if _Wx_=`W1`.
-Depending on the _effective privilege mode_, a `CBO.INVAL` instruction takes 
-the following types of traps based on the `INVWxE` values:
-
-* M-mode:
-  **  _N/A_ (`CBO.INVAL` never faults due to the CMO control registers)
-* S/HS-mode:
-  ** Access fault: +
-    `!(mcmocontrol.INVWxE)`
-* U-mode:
-  ** Page fault: +
-    `!(scmocontrol.INVWxE || satp.MODE==Bare)`
-  ** Access fault: +
-    `(scmocontrol.INVWxE || satp.MODE==Bare) &&` +
-    `!(mcmocontrol.INVWxE)`
-* VS-mode:
-  ** Guest-page fault: +
-    `!(hcmocontrol.INVWxE || hgatp.MODE==Bare)`
-  ** Access fault: +
-    `(hcmocontrol.INVWxE || hgatp.MODE==Bare) &&` +
-    `!(mcmocontrol.INVWxE)`
-* VU-mode:
-  ** Page fault: +
-    `!(scmocontrol.INVWxE || vsatp.MODE==Bare)`
-  ** Guest-page fault: +
-    `(scmocontrol.INVWxE || vsatp.MODE==Bare) &&` +
-    `!(hcmocontrol.INVWxE || hgatp.MODE==Bare)`
-  ** Access fault: +
-    `(scmocontrol.INVWxE || vsatp.MODE==Bare) &&` +
-    `(hcmocontrol.INVWxE || hgatp.MODE==Bare) &&` +
-    `!(mcmocontrol.INVWxE)`
-
-****
-_The above exception priorities reflect the architected exception priorities in 
-the privileged architecture specification._
-****
-
-For each CSR, the resulting `INVWxI` value is determined by the designated 
-_protection_mechanism_, which selects the `INVW0I` bit if _Wx_=`W0` or the 
-`INVW1I` bit if _Wx_=`W1`, if that protection mechanism is enabled.
-If the protection mechanism is disabled, the `INVWxI` value is the logical AND 
-of the `INVW0I` bit and the `INVW1I` bit, i.e. both bits _must_ be set to 
-perform an invalidate operation.
-Assuming that no exception arises and depending on the 
-_effective privilege mode_, a `CBO.INVAL` instruction performs the following 
-operations based on the `INVWxI` values:
-
-* M-mode:
-  ** Flush: +
-  `FALSE` (`CBO.INVAL` never performs a flush operation)
-  ** Invalidate: +
-  `TRUE` (`CBO.INVAL` always performs an invalidate operation)
-* S-mode:
-  ** Flush: +
-    `!(mcmocontrol.INVWxI)`
-  ** Invalidate: +
-    `(mcmocontrol.INVWxI)`
-* U-mode:
-  ** Flush: +
-    `!(scmocontrol.INVWxI && mcmocontrol.INVWxI)`
-  ** Invalidate: +
-    `(scmocontrol.INVWxI && mcmocontrol.INVWxI)`
-* VS-mode:
-  ** Flush: +
-    `!(hcmocontrol.INVWxI && mcmocontrol.INVWxI)`
-  ** Invalidate: +
-    `(hcmocontrol.INVWxI && mcmocontrol.INVWxI)`
-* VU-mode:
-  ** Flush: +
-    `!(scmocontrol.INVWxI && hcmocontrol.INVWxI && mcmocontrol.INVWxI)`
-  ** Invalidate: +
-    `(scmocontrol.INVWxI && hcmocontrol.INVWxI && mcmocontrol.INVWxI)`

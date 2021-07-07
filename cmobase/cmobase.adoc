@@ -45,23 +45,15 @@ include::acknowledgements.adoc[]
 [preface]
 == Pseudocode for instruction semantics
 
-The semantics of each instruction in <<#insns>> is expressed in a SAIL-like syntax.
+The semantics of each instruction in the <<#insns>> chapter is expressed in a
+SAIL-like syntax.
 
-// Main text
+// Chapters
 include::introduction.adoc[]
 include::background.adoc[]
 include::csr_state.adoc[]
-include::instructions_by_extension.adoc[]
-
-[#insns,reftext="Instructions (in alphabetical order)"]
-== Instructions (in alphabetical order)
-include::insns/cbo.clean.adoc[]
-<<<
-include::insns/cbo.inval.adoc[]
-<<<
-include::insns/cbo.flush.adoc[]
-<<<
-include::insns/cbo.zero.adoc[]
+include::extensions.adoc[]
+include::instructions.adoc[]
 
 [appendix]
 == Software guide

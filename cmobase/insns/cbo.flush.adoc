@@ -1,4 +1,4 @@
-[#insns-cbo_flush,reftext="Cache-block flush (effective address)"]
+[#insns-cbo_flush,reftext="Cache Block Flush"]
 === cbo.flush
 
 Synopsis::
