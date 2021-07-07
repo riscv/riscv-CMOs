@@ -8,7 +8,8 @@ The repo is organized as follows:
 
 * Archive - contains old TG information including Andy Glew's initial proposals
   and wiki pages
-* specifications - this is the main working area for TG documentation
+* cmobase - this is the main working area for Phase 1 TG documentation
+* specifications - the latest published spec is here
 * CMO-Phase-1-Scope.md - provides a summary of the current TG goals and roadmap
 * LICENSE.md - license information
 * README.md - this file
