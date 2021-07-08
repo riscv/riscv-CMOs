@@ -1,3 +1,7 @@
+= Zicmobase Extension, Version 0.2
+:sectnums:
+:toc:
+
 == Introduction
 
 The Zicmobase extension adds a base set of _cache management operation_ (or 
@@ -581,4 +585,487 @@ implementation._
 _For load and store address matches on a CMO effective address, software should 
 program the trigger to match on NAPOT ranges, i.e. `mcontrol6.match=1`, and 
 should program the NAPOT range to equal the cache block size._
+****
+
+== Formats
+
+=== Instructions
+
+For Zicbom and Zicboz:
+
+ inst[6:0]   - 0b0001111 (MISC-MEM)
+ inst[11:7]  - 0b00000 (rd - reserved)
+ inst[14:12] - 0b010 (new funct3 encoding)
+ inst[19:15] - rs1 (effective address)
+ inst[24:20] - 0b00000 (rs2 - reserved)
+ inst[31:25] - 0bxxxyyyy (funct7), where
+    xxx:  0b000 (reserved for future modifiers)
+    yyyy: 0b0000 - CBO.INVAL
+          0b0001 - CBO.CLEAN
+          0b0010 - CBO.FLUSH
+          0b0100 - CBO.ZERO
+          all others reserved
+
+=== CSRs
+
+*_FIXME_*: How is this extension disabled?
+
+Four CSRs control execution of CMO instructions:
+
+* `mcmocontrol`
+* `scmocontrol`
+* `hcmocontrol`
+* `vscmocontrol`
+
+****
+_The `scmocontrol` and `vscmocontrol` registers are both required to
+*distinguish CMO execution behavior when the effective privilege mode is U-mode
+*or VU-mode, respectively. These registers are only present if the H-extension
+*is implemented and  enabled._
+
+We need a separate vscmocontrol register to differentiate between the effective
+VU-mode behaviors and the effective U-mode behaviors in the scmocontrol when
+MPRV=1. So even though the hypervisor could swap out scmocontrol before
+returning to either VU/VS or U, M could arbitrarily perform effective VU or U
+accesses without letting the hypervisor know.
+****
+
+Each `xcmocontrol` register has the following generic format:
+
+.Generic Format for xcmocontrol CSRs
+[cols="^1,^1,1a"]
+[%autowidth]
+|===
+| Bits    | Name     | Description
+
+| [0]     | `CBME`   | Cache Block Management instruction Enable
+
+Determines the behavior of a cache block management instruction (i.e. 
+`CBO.INVAL`, `CBO.CLEAN`, or `CBO.FLUSH`) when the instruction is executed in 
+_privilege_mode_.
+
+* `0`: The instruction takes an illegal instruction exception
+* `1`: The instruction is executed
+
+| [1]     | `CBWE`   | Cache Block Write instruction Enable
+
+Determines the behavior of a cache block write instruction (i.e. `CBO.ZERO`) 
+when the instruction is executed in _privilege_mode_.
+
+* `0`: The instruction takes an illegal instruction exception
+* `1`: The instruction is executed
+
+| [7:2]   | _Rsvd_   | _Reserved_
+
+| [8]     | `INVW0I` | `CBO.INVAL` access without write permission performs an 
+Invalidate operation
+
+Determines the operation performed by a `CBO.INVAL` instruction when the 
+resulting access _has not been_ granted write permission in the effective 
+privilege mode (_Wx_=`W0`) and when the instruction does _not_ raise an 
+exception:
+
+* `0`: The instruction performs a flush operation
+* `1`: The instruction performs an invalidate operation
+
+| [9]     | `INVW0E` | `CBO.INVAL` access without write permission Enable
+
+Determines the behavior of a `CBO.INVAL` instruction when a 
+_protection_mechanism_ is enabled and the resulting access _has not been_ 
+granted write permission in the effective privilege mode (_Wx_=`W0`):
+
+* `0`: The instruction takes an exception (page fault, guest-page fault, or 
+  access fault depending on the CSR)
+* `1`: The instruction performs an operation based on `INVW0I`
+
+| [10]    | `INVW1I` | `CBO.INVAL` access with write permission performs an 
+Invalidate operation
+
+Determines the operation performed by a `CBO.INVAL` instruction when the 
+resulting access _has been_ granted write permission in the effective privilege 
+mode (_Wx_=`W1`) and when the instruction does _not_ raise an exception:
+
+* `0`: The instruction performs a flush operation
+* `1`: The instruction performs an invalidate operation
+
+| [11]    | `INVW1E` | `CBO.INVAL` access with write permission Enable
+
+Determines the behavior of a `CBO.INVAL` instruction when a 
+_protection_mechanism_ is enabled and the resulting access _has been_ granted 
+write permission in the effective privilege mode (_Wx_=`W1`):
+
+* `0`: The instruction takes an exception (page fault, guest-page fault, or 
+  access fault depending on the CSR)
+* `1`: The instruction performs an operation based on `INVW1I`
+
+| [x:12]  | _Rsvd_   | _Reserved_
+|===
+
+Each `xcmocontrol` register is WARL, where CSR reads return the behaviors 
+supported by the implementation.
+
+The following subsections detail how the `xcmocontrol` CSRs govern the 
+execution of CMO instructions.
+
+==== Determining Traps
+
+===== Illegal Instruction Exceptions
+
+The descriptions for the `CBME` and `CBWE` bits in the `xcmocontrol` registers 
+include a _privilege_mode_ parameter that corresponds to the privilege modes 
+controlled by a given CSR. Each CSR defines this parameter as follows:
+
+* For `mcmocontrol`, _privilege_mode_ corresponds to S/HS-mode, U-mode, 
+  VS-mode, and VU-mode
+* For `scmocontrol`, _privilege_mode_ corresponds to U-mode
+* For `hcmocontrol`, _privilege_mode_ corresponds to VS-mode and VU-mode
+* For `vscmocontrol`, _privilege_mode_ corresponds to VU-mode
+
+Depending on the _current privilege mode_, a cache block management instruction 
+takes an illegal instruction exception based on the `CBME` bits:
+
+* M-mode: +
+  `FALSE` (cache block management instructions never take illegal instruction 
+  exceptions)
+* S/HS-mode: +
+  `!mcmocontrol.CBME`
+* U-mode: +
+  `!mcmocontrol.CBME || !scmocontrol.CBME`
+* VS-mode: +
+  `!mcmocontrol.CBME || !hcmocontrol.CBME`
+* VU-mode: +
+  `!mcmocontrol.CBME || !hcmocontrol.CBME || !vscmocontrol.CBME`
+
+Depending on the _current privilege mode_, a cache block write instruction 
+takes an illegal instruction exception based on the `CBWE` bits:
+
+* M-mode: +
+  `FALSE` (cache block write instructions never take illegal instruction 
+  exceptions)
+* S/HS-mode: +
+  `!mcmocontrol.CBWE`
+* U-mode: +
+  `!mcmocontrol.CBWE || !scmocontrol.CBWE`
+* VS-mode: +
+  `!mcmocontrol.CBWE || !hcmocontrol.CBWE`
+* VU-mode: +
+  `!mcmocontrol.CBWE || !hcmocontrol.CBWE || !vscmocontrol.CBWE`
+
+Otherwise, the above instructions are executed in the _current privilege mode_.
+
+===== Page Fault, Guest-Page Fault, and Access Fault Exceptions
+
+The descriptions for the `INVWxE` and `INVWxI` bits in the `xcmocontrol` 
+registers include a _protection_mechanism_ parameter that corresponds to the 
+protection mechanism that determines write permission for an access and a 
+_Wx_ parameter that represents whether write permission has been granted (`W1`) 
+or not (`W0`).
+Each CSR defines these as follows:
+
+* For `mcmocontrol`, _protection_mechanism_ corresponds to the PMP and PMAs 
+  and _Wx_ corresponds to whether partial joint write permission has been 
+  granted by the PMP and PMAs
+* For `scmocontrol`, _protection_mechanism_ corresponds to the `satp` page 
+  table and _Wx_ corresponds to whether write permission has been granted by 
+  the leaf PTE `W` bit
+* For `hcmocontrol`, _protection_mechanism_ corresponds to the `hgatp` page 
+  table and _Wx_ corresponds to whether write permission has been granted by 
+  the leaf PTE `W` bit
+* For `vscmocontrol`, _protection_mechanism_ corresponds to the `vsatp` page 
+  table and _Wx_ corresponds to whether write permission has been granted by 
+  the leaf PTE `W` bit
+
+For each CSR, the resulting `INVWxE` value is determined by the designated 
+_protection_mechanism_, which selects the `INVW0E` bit if _Wx_=`W0` or the 
+`INVW1E` bit if _Wx_=`W1`.
+Depending on the _effective privilege mode_, a `CBO.INVAL` instruction takes 
+the following types of traps based on the `INVWxE` values:
+
+* M-mode:
+  **  _N/A_ (`CBO.INVAL` never faults due to the CMO control registers)
+* S/HS-mode:
+  ** Access fault: +
+    `!(mcmocontrol.INVWxE)`
+* U-mode:
+  ** Page fault: +
+    `!(scmocontrol.INVWxE || satp.MODE==Bare)`
+  ** Access fault: +
+    `(scmocontrol.INVWxE || satp.MODE==Bare) &&` +
+    `!(mcmocontrol.INVWxE)`
+* VS-mode:
+  ** Guest-page fault: +
+    `!(hcmocontrol.INVWxE || hgatp.MODE==Bare)`
+  ** Access fault: +
+    `(hcmocontrol.INVWxE || hgatp.MODE==Bare) &&` +
+    `!(mcmocontrol.INVWxE)`
+* VU-mode:
+  ** Page fault: +
+    `!(vscmocontrol.INVWxE || vsatp.MODE==Bare)`
+  ** Guest-page fault: +
+    `(vscmocontrol.INVWxE || vsatp.MODE==Bare) &&` +
+    `!(hcmocontrol.INVWxE || hgatp.MODE==Bare)`
+  ** Access fault: +
+    `(vscmocontrol.INVWxE || vsatp.MODE==Bare) &&` +
+    `(hcmocontrol.INVWxE || hgatp.MODE==Bare) &&` +
+    `!(mcmocontrol.INVWxE)`
+
+****
+_The above exception priorities reflect the architected exception priorities in 
+the privileged architecture specification._
+****
+
+For each CSR, the resulting `INVWxI` value is determined by the designated 
+_protection_mechanism_, which selects the `INVW0I` bit if _Wx_=`W0` or the 
+`INVW1I` bit if _Wx_=`W1`, if that protection mechanism is enabled.
+If the protection mechanism is disabled, the `INVWxI` value is the logical AND 
+of the `INVW0I` bit and the `INVW1I` bit, i.e. both bits _must_ be set to 
+perform an invalidate operation.
+Assuming that no exception arises and depending on the 
+_effective privilege mode_, a `CBO.INVAL` instruction performs the following 
+operations based on the `INVWxI` values:
+
+* M-mode:
+  ** Flush: +
+  `FALSE` (`CBO.INVAL` never performs a flush operation)
+  ** Invalidate: +
+  `TRUE` (`CBO.INVAL` always performs an invalidate operation)
+* S-mode:
+  ** Flush: +
+    `!(mcmocontrol.INVWxI)`
+  ** Invalidate: +
+    `(mcmocontrol.INVWxI)`
+* U-mode:
+  ** Flush: +
+    `!(scmocontrol.INVWxI && mcmocontrol.INVWxI)`
+  ** Invalidate: +
+    `(scmocontrol.INVWxI && mcmocontrol.INVWxI)`
+* VS-mode:
+  ** Flush: +
+    `!(hcmocontrol.INVWxI && mcmocontrol.INVWxI)`
+  ** Invalidate: +
+    `(hcmocontrol.INVWxI && mcmocontrol.INVWxI)`
+* VU-mode:
+  ** Flush: +
+    `!(vscmocontrol.INVWxI && hcmocontrol.INVWxI && mcmocontrol.INVWxI)`
+  ** Invalidate: +
+    `(vscmocontrol.INVWxI && hcmocontrol.INVWxI && mcmocontrol.INVWxI)`
+
+****
+_Until a modified cache block has updated memory, a `CBO.INVAL` instruction may
+expose stale data values in memory if the CSRs are programmed to perform an 
+invalidate operation._
+_This behavior may result in a security hole if lower privileged level software 
+performs an invalidate operation and accesses sensitive information in memory._
+_To avoid such holes, higher privileged level software must perform either a 
+clean or flush operation on the cache block before permitting lower privileged 
+level software to perform an invalidate operation on the block._
+
+_Alternatively, higher privileged level software may program the CSRs so that 
+`CBO.INVAL` either traps or performs a flush operation in a lower privileged 
+level._
+_The W0 and W1 bits allow higher privileged software finer-grained control of 
+the behavior of `CBO.INVAL` in lower privilege levels based on whether write 
+permission has been granted to that level by a particular protection 
+mechanism._
+****
+
+== Instructions
+
+=== Cache Block Management Instructions
+
+Cache block management instructions operate on the cache blocks containing the 
+effective address specified in _rs1_.
+These instructions also specify a _PoC_ that, along with the coherence PMA, 
+determines the set of caches on which the operation is performed.
+In particular, the set of caches consists of one of the following:
+
+* If the coherence PMA indicates that hardware enforces coherence on the 
+  physical address, all the caches accessed by the hart directly and indirectly 
+  in the coherence domains on the path from the hart to the _PoC_
+* If the coherence PMA indicates that hardware does _not_ enforce coherence on 
+  the physical address, only the caches accessed by the hart directly on the 
+  path from the hart to the _PoC_
+
+==== `CBO.INVAL`
+
+A `CBO.INVAL` instruction performs an _invalidate_ operation or a _flush_ 
+operation, depending on the state of the CMO CSRs, on the set of caches 
+determined by the _PoC_ and the coherence PMA.
+
+==== `CBO.CLEAN`
+
+A `CBO.CLEAN` instruction performs a _clean_ operation on the set of caches 
+determined by the _PoC_ and the coherence PMA.
+
+==== `CBO.FLUSH`
+
+A `CBO.FLUSH` instruction performs a _flush_ operation on the set of caches 
+determined by the _PoC_ and the coherence PMA.
+
+=== Cache Block Write Instruction
+
+Cache block write instructions operate on the cache blocks containing the 
+effective address specified in _rs1_.
+These instructions also specify a _level_, which is a hint to the hardware to 
+allocate the cache block in a designated cache.
+_level_ is specified as follows:
+
+* `default` -- an _implementation-defined_ level, which may be a function of
+  physical addresses, dynamic allocation policies, or any other characteristic
+* `L1` -- the first cache logically accessed by a hart on the path to memory
+* `L2` -- the second cache logically accessed by a hart on the path to memory
+* `L3` -- the third cache logically accessed by a hart on the path to memory
+
+An implementation may ignore _level_ and assume _level_ is `default` for all 
+cache block write instructions.
+
+****
+_To a certain degree, level is implementation-defined for all systems; however, 
+`L1`, `L2`, and `L3` are intended to communicate their common, informal 
+meaning._
+****
+
+==== `CBO.ZERO`
+
+A `CBO.ZERO` instruction performs a series of byte writes whose data value 
+equals zero to all the bytes in a cache block.
+An implementation may write any number of bytes in the cache block atomically.
+The instruction may allocate, but is _not_ guaranteed to allocate, the cache 
+block in the cache specified by _level_.
+
+=== Cache Block Hint Instructions
+
+Cache block hint instructions operate on the cache blocks containing the 
+effective address specified in _rs1_.
+These instructions also specify a _level_, which is a hint to the hardware to 
+allocate the cache block in a designated cache.
+_level_ is specified as follows:
+
+* `default` -- an _implementation-defined_ level, which may be a function of
+  physical addresses, dynamic allocation policies, or any other characteristic
+* `L1` -- the first cache logically accessed by a hart on the path to memory
+* `L2` -- the second cache logically accessed by a hart on the path to memory
+* `L3` -- the third cache logically accessed by a hart on the path to memory
+
+An implementation may ignore _level_ and assume _level_ is `default` for all 
+cache block hint instructions.
+
+****
+_To a certain degree, level is implementation-defined for all systems; however, 
+`L1`, `L2`, and `L3` are intended to communicate their common, informal 
+meaning._
+****
+
+==== `PREFETCH.R`
+
+A `PREFETCH.R` instruction indicates to the cache at the specified _level_ that 
+a subsequent read operation is likely to be performed on the cache block at the
+specified effective address in the near future.
+
+An implementation typically allocates the cache block in the cache at the 
+specified _level_ in a state that allows read access; however, the instruction 
+is _not_ guaranteed to allocate the cache block in that cache.
+
+==== `PREFETCH.W`
+
+A `PREFETCH.W` instruction indicates to the cache at the specified _level_ that 
+a subsequent write operation is likely to be performed on the cache block at 
+the specified effective address in the near future.
+
+An implementation typically allocates the cache block in the cache at the 
+specified _level_ in a state that allows write access; however, the instruction 
+is _not_ guaranteed to allocate the cache block in that cache.
+
+A PREFETCH.W instruction may interfere with the eventual success guarantee of 
+store-conditional instructions.
+
+==== `PREFETCH.I`
+
+A `PREFETCH.I` instruction indicates to the cache at the specified _level_ that 
+a subsequent instruction fetch operation is likely to be performed on the 
+cache block at the specified effective address in the near future.
+
+An implementation typically allocates the cache block in the cache at the 
+specified _level_ in a state that allows instruction fetch access; however, the 
+instruction is _not_ guaranteed to allocate the cache block in that cache.
+
+Instruction fetch operations may access caches different from those accessed by 
+read and write operations.
+It is _implementation-defined_ whether the cache at the specified _level_ in a 
+`PREFETCH.I` instruction is the same cache at the specified _level_ in a 
+`PREFETCH.R` or `PREFETCH.W` instruction.
+
+==== `DEMOTE`
+
+A `DEMOTE` instruction indicates to the cache at the specified _level_ that the 
+cache block at the specified effective address is no longer required to be 
+cached.
+
+****
+_Typically, a `DEMOTE` instruction operates on the replacement algorithm_
+_information for a cache block rather than the cache block itself._
+****
+
+=== FIXME: Cache Block Discovery Instruction
+
+==== FIXME: `CBO.SIZE`
+
+
+== Opcode Map
+
+'''
+[.text-center]
+*FIXME BEYOND HERE*
+
+'''
+
+.Ignore Me
+****
+
+PoC Wording:
+
+
+Paths converge at a _point of convergence_, or _PoC_, which designates the 
+point at which a set of memory accesses to the same memory location is 
+logically ordered.
+Once ordered by a PoC, a memory access in the set cannot be reordered with 
+respect to other memory accesses in the set, and the set of memory accesses 
+shares the remainder of the path to the memory location.
+
+The fundamental PoC for a given physical 
+address is the _point of convergence for memory_, or _PoC-memory_, which is the 
+PoC where all paths for that physical address converge, independent of all 
+other characteristics that define a path.
+
+Memory Ordering Wording:
+
+_The existing `FENCE` instruction is sufficient to order the cache management operations in the base extension._
+_In future extensions, an additional fence instruction may be required to determine when certain cache management operations are complete._
+
+
+CSR stuff:
+
+| [9:8]   | `INVW0`  | CBO.INVAL access without write permission (`_Wx_=0`).
+
+Determines the behavior of a CBO.INVAL instruction when the corresponding 
+access does _not_ have write permission in the effective privilege mode:
+
+* `0`: Execution results in an exception (page fault, guest-page fault, or 
+  access fault) [trap]
+* `1`: _Reserved_ (aliases to `0`)
+* `2`: Execution performs a flush operation [flush]
+* `3`: Execution performs an invalidate operation [invalidate]
+
+| [11:10] | `INVW1`  | CBO.INVAL access with write permission (`_Wx_=1`).
+
+Determines the behavior of a CBO.INVAL instruction when the corresponding 
+access has write permission in the effective privilege mode:
+
+* `0`: Execution results in an exception (page fault, guest-page fault, or 
+  access fault depending on the CSR) [trap]
+* `1`: _Reserved_ (aliases to `0`)
+* `2`: Execution performs a flush operation [flush]
+* `3`: Execution performs an invalidate operation [invalidate]
+
+|         |          |
 ****

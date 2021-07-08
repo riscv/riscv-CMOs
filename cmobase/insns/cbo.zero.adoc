@@ -1,29 +1,29 @@
-[#insns-cbo_zero,reftext="Cache-block zeroize (effective address)"]
-=== cbo.zero.ea
+[#insns-cbo_zero,reftext="Cache Block Zero"]
+=== cbo.zero
 
 Synopsis::
-Zeroize a cache-block (at effective address)
+Write zeros to the cache block containing the effective address
 
 Mnemonic::
-cbo.zero.ea _rs_
+cbo.zero _rs_
 
 Encoding::
 [wavedrom, , svg]
 ....
 {reg:[
-	{ bits: 7,  name: 0x7,   attr: ['MISC-MEM'] },
+	{ bits: 7,  name: 0xF,   attr: ['MISC-MEM'] },
 	{ bits: 5,  name: 0x0 },
 	{ bits: 3,  name: 0x2,   attr: ['CBO'] },
 	{ bits: 5,  name: 'rs' },
-	{ bits: 12, name: 0x004, attr: ['CBO.ZERO.EA'] },
+	{ bits: 12, name: 0x004, attr: ['CBO.ZERO'] },
 ]}
 ....
 
 Description::
-The *cbo.zero.ea* instruction zeroizes a cache-block at the effective-address read from register _rs_.
-It is equivalent to series of byte-sized writes whose value equals zero to all bytes in a cache block.
-An implementation may write any number of bytes in the cache block atomically.
-The instruction is not guaranteed to allocate the cache block in the cache specified by level.
+The *cbo.zero* instruction performs a series of byte-sized store operations
+where the data equal zero. An implementation may or may not update the entire
+cache block atomically and may or may not allocate a copy of the cache block in
+one of the coherent caches accessed by the observer executing the instruction.
 
 Operation::
 [source,sail]

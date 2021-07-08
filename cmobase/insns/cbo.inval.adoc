@@ -1,26 +1,31 @@
-[#insns-cbo_inval,reftext="Cache-block invalidate (effective address)"]
-=== cbo.invalidate.ea
+[#insns-cbo_inval,reftext="Cache Block Invalidate"]
+=== cbo.inval
 
 Synopsis::
-Flush or Invalidate a cache-block (at effective address)
+Perform an invalidate operation on the cache block containing the effective
+address
 
 Mnemonic::
-cbo.invalidate.ea _rs_
+cbo.inval _rs_
 
 Encoding::
 [wavedrom, , svg]
 ....
 {reg:[
-	{ bits: 7,  name: 0x7,   attr: ['MISC-MEM'] },
+	{ bits: 7,  name: 0xF,   attr: ['MISC-MEM'] },
 	{ bits: 5,  name: 0x0 },
 	{ bits: 3,  name: 0x2,   attr: ['CBO'] },
 	{ bits: 5,  name: 'rs' },
-	{ bits: 12, name: 0x000, attr: ['CBO.INVALIDATE.EA'] },
+	{ bits: 12, name: 0x000, attr: ['CBO.INVAL'] },
 ]}
 ....
 
 Description::
-The *cbo.invalidate.ea* performs an *invalidate* or *flush* on the cache-block at the effective-address read from register _rs_, depending on the state of the CMO CSR, on the set of caches detemrined by the *PoC* and the coherence PMA.
+
+A *cbo.inval* instruction performs an invalidate operation on the set of
+coherent caches accessed by the observer executing the instruction. The
+instruction may perform a flush operation, however, depending on CSR
+programming.
 
 Operation::
 [source,sail]

@@ -2,15 +2,3 @@
 == Colophon
 
 This document is released under the https://creativecommons.org/licenses/by/4.0/[Creative Commons Attribution 4.0 International License].
-
-The Zicmobase extension adds a base set of _cache management operation_ (or _CMO_) instructions and CSRs to the RISC-V architecture.
-The base extension includes several classes of instructions that operate on cache blocks:
-
-* A set of cache block management instructions, i.e. `CBO.INVAL`, `CBO.CLEAN`, and `CBO.FLUSH`
-* A cache block write instruction, i.e. `CBO.ZERO`
-* A set of cache block hint instructions, i.e. `PREFETCH.R`, `PREFETCH.W`, `PREFETCH.I`, and `DEMOTE`
-
-The execution of these instructions in various privilege modes is controlled by a set of CSRs.
-
-In addition, this specification introduces architectural abstractions for caches and system topologies to support portable software across various system designs.
-

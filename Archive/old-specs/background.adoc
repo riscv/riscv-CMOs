@@ -1,0 +1,169 @@
+== Introduction (Ignore)
+
+_Cache management operation_ (_CMO_) instructions perform operations on caches
+in the memory hierarchy. These instructions may be classified in a number of
+ways as follows:
+
+* A _management_ instruction manipulates the contents of caches
+
+* A _zero_ instruction writes zeros to a range of memory locations and may
+  allocate a cache block in a cache accessed by a hart
+
+* A _prefetch_ instruction may allocate a cache block in a cache accessed by a
+  hart in anticipation of 
+
+
+
+
+In general, a CMO instruction initiates an operation on a set of caches based 
+on instruction type, CSR state, physical memory attributes, and other 
+architectural state.
+The CSR state determines whether a particular CMO instruction is executed or traps and, in
+some cases, modifies the behavior of the instruction.
+A CMO instruction specifies an effective address, which may be translated by 
+various translation mechanisms into a physical address.
+A hart may then perform a subsequent memory access with that physical address 
+in order to operate on various caches throughout a system.
+
+
+== Background (Only Read This)
+
+***
+
+*START READING HERE*
+
+***
+
+As specified in the RISC-V base and privileged architectures, memory is
+organized as an array of bytes, with a given physical address identifying a
+particular memory location. An _observer_ of a memory location is a hart or an
+I/O device that can load from or store to that memory location; a given observer
+may _not_ be able to access all memory locations in the system.
+
+****
+
+_Loads and stores are operations performed by an observer, while reads and
+writes are operations performed on a memory location. These operations may be
+decoupled by caches, described below. For example, a load may be serviced by a
+cache without performing a read of memory, or a write may be serviced by a cache
+by first performing a read of memory._
+
+****
+
+When performing loads and stores, an observer may access any number of _caches_
+that may provide the requested data instead of the underlying memory locations.
+A cache buffers copies of data organized into _cache blocks_, which consist of
+naturally aligned power-of-two (_NAPOT_) sets of contiguous bytes. Each cache
+block is tagged with a physical address that identifies the corresponding memory
+locations. The organization of each cache and the size of a cache block are both
+_implementation-defined_.
+
+A cache may be _private_, in which case the cache is accessed by a single
+observer, or _shared_, in which case cache is accessed by more than one
+observer. Multiple cache blocks for the same memory locations may be present in
+the system simultaneously, introducing multiple copies of data, and a system may
+implement mechanisms to keep the data in some or all of those copies coherent.
+
+For a given memory location, a _set of coherent observers_ consists of the set
+of observers for which all of the following are true:
+
+* Stores from all observers in the set appear to be serialized with respect to
+  each other
+
+* Stores from all observers in the set eventually appear to all other observers
+  in the set
+
+* A load from an observer in the set returns the data values from a store from 
+  an observer in the set (or the initial data values in memory)
+
+Coherent observers _must_ access a given memory location with the same physical
+address and the same memory attributes, particularly coherence and cacheability.
+
+****
+
+_Effectively, the loads and stores performed by the set of coherent observers
+are subject to one of the memory order models defined by the ISA._
+
+****
+
+An observer who is a member of a set of coherent observers is said to be
+_coherent_ with respect to the other observers in the set. On the other hand, an
+observer who is _not_ a member is said to be _non-coherent_ with respect to the
+observers in the set.
+
+For a given cache block, the caches accessed by the coherent observers are kept
+coherent by an _implementation_defined_ mechanism. Such a _coherent cache_ may
+read the cache block at any time from another coherent cache or from the
+underlying memory locations. Similarly, a coherent cache may write the cache
+block at any time to another coherent cache. In addition, a coherent cache may
+write the cache block at any time to the underlying memory locations, provided
+that a coherent observer performed a store to the cache block since the previous
+such write. In this case, in the absence of an invalidate operation performed by
+a coherent observer, at least one coherent cache _must_ write the cache block to
+the underlying memory locations; otherwise, no coherent cache may write the
+cache block to the underlying memory locations.
+
+****
+
+_The above restrictions ensure that a "clean" copy cannot be written back into
+memory._
+
+****
+
+Cache block management operations enable software running on a set of coherent
+observers to communicate with a set of non-coherent observers:
+
+* An _invalidate operation_ makes stores from a set of non-coherent observers
+  appear to the set of coherent observers by removing all copies of a cache
+  block from the coherent caches
+
+* A _clean operation_ makes stores from the set of coherent observers appear to
+  a set of non-coherent observers by writing a copy of a cache block to the
+  underlying memory locations (or to a cache shared by both sets), provided a
+  coherent observer stored to the cache block since the previous such write
+
+* A _flush operation_ atomically performs a clean operation followed by an
+  invalidate operation
+
+*_FIXME:_* There is some question whether the two sub-operations in a flush
+operation must be atomic.
+
+Cache block zero operations perform a series of store byte operations where the
+data are zero. An implementation may or may not update the entire cache block
+atomically.
+
+Cache block prefetch operations are performance hints to the coherent caches to
+guide the placement of cache blocks. As hints, these operations may or may not
+cause cache blocks to be transferred to a particular cache.
+
+=== Specifying Caches
+
+Replacement for PoC:
+
+* Point of 
+
+* Shared Access Point (SAP)
+
+* Common Access Point (CAP)
+
+* point of common access (PCA)
+
+* Point of Shared Access
+
+* Joint, 
+
+
+The set of coherent observers is a function of the physical address and the
+memory attributes of the access. As a result, the whatever point/level is
+determined by the same characteristics.
+
+For example, the set of coherent observers for a non-coherent attribute is only
+the executing hart.
+
+CMOs ignore cacheability so PCA must be explicit vs. implicit above.
+
+***
+
+*STOP READING HERE*
+
+***

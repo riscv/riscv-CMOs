@@ -1,0 +1,16 @@
+[#extensions,reftext="Extensions"]
+== Extensions
+
+CMO instructions are defined in the following extensions:
+
+* <<#Zicbom>>
+* <<#Zicboz>>
+* Cache Block Prefetch Instructions (TBD)
+
+Cache block management instructions and cache block zero instructions operate on
+the cache block containing the effective address specified in _rs_. The
+effective address is translated into a corresponding physical address by the
+translation mechanisms appropriate in the effective privilege level.
+
+include::Zicbom.adoc[]
+include::Zicboz.adoc[]

@@ -1,0 +1,240 @@
+=== Cache Behavior
+
+_*NOTE*_: This file is not included in the current specification.
+
+==== Cache Block States
+
+Relative to a given cache, a cache block may be in one of three states:
+
+* _Invalid_ -- the cache block is _not_ present in the cache
+* _Unmodified_ -- the cache block is present in the cache and _this_ copy has 
+  _not_ been written by a system agent
+* _Modified_ -- the cache block is present in the cache and _this_ copy has been 
+  written by a system agent
+
+All caches differentiate between invalid and unmodified cache blocks, and a
+cache may or may not track modified cache blocks depending on 
+_implementation-defined_ write policies, e.g. write-back or write-through,
+respectively.
+A cache, therefore, may implement only two states (invalid and unmodified) or 
+all three states (invalid, unmodified, and modified).
+Additionally, a cache block in either the unmodified or modified state is 
+considered to be _valid_.
+
+In addition, based on _implementation-defined_ system-wide cache policies and 
+mechanisms, an unmodified cache block may _not_ be consistent with memory, and 
+a modified copy may be present in another cache at the same time.
+Furthermore, the state of the cache block may also be communicated when the 
+block is transferred to or from the cache.
+These policies and mechanisms are typically defined by a cache coherence 
+protocol (see the <<_system_topology>> section) and are beyond the scope of 
+this specification.
+
+A transition from invalid to valid occurs when a cache allocates a cache block, 
+resulting in a transfer of the block to the cache from another cache or memory 
+(performing a _memory read_ in the latter case).
+To the extent allowed by the base and privileged architectures, a cache may 
+allocate a cache block for any physical address at any time for any reason.
+The cache block is allocated in either the unmodified or modified state 
+depending on whether the cache tracks modified cache blocks and whether an 
+unmodified or modified cache block is transferred to the cache.
+
+A transition from valid to invalid occurs when a cache deallocates the cache 
+block, potentially resulting in a transfer of the block from the cache to 
+another cache or memory (performing a _memory write_ in the latter case).
+A cache may deallocate a cache block at any time for any reason.
+If the cache block is unmodified, the cache may transfer the cache block to 
+another cache but _must not_ transfer the cache block to memory to avoid 
+overwriting memory with potentially stale data.
+(The behavior of CMO instructions becomes UNSPECIFIED if a cache transfers an 
+unmodified cache block to memory.)
+If the cache block is modified, the cache _must_ transfer the modified block to 
+another cache or memory.
+
+Finally, if the cache tracks modified cache blocks, a transition from 
+unmodified to modified occurs whenever a system agent executes an instruction, 
+e.g. a store instruction, or performs an operation, e.g. a page table entry 
+write, that writes to a cache block that has been transferred to the cache.
+To cause the transition, the instruction or operation only needs to be 
+classified as a data write that _may_ change the data values in the cache 
+block; the data write is _not_ required to change the data values.
+If the cache does _not_ track modified cache blocks, the data write _must_ be 
+propagated either to another cache that does track modified cache blocks or to 
+memory.
+In such a cache, the data write _must_ update the data values of the cache 
+block, or the cache block _must_ transition to invalid.
+
+==== CMO Effects on Caches
+
+CMO instructions may also affect the state of a cache block.
+A cache block management instruction performs one of the following operations, 
+which may change the state of a cache block and may result in a transfer of 
+data from the cache:
+
+* An _invalidate_ operation _must_ change the state of a valid cache block 
+  to invalid; otherwise, no state change occurs.
+  The operation may transfer the cache block if its state was valid before the 
+  operation; however, the transfer of the cache block is _not_ required.
+* A _clean_ operation _must_ change the state of a modified cache block to 
+  unmodified, although the operation may change the state of a valid cache 
+  block to invalid; otherwise, no state change occurs.
+  The operation _must_ transfer the cache block if its state was modified 
+  before the operation and may transfer the cache block if its state was 
+  unmodified before the operation.
+* A _flush_ operation _must_ change the state of a valid cache block to 
+  invalid; otherwise, no state change occurs.
+  The operation _must_ transfer the cache block if its state was modified 
+  before the operation and may transfer the cache block if its state was 
+  unmodified before the operation.
+
+A cache block write instruction effectively performs a series of byte atomic 
+data write operations, similar to a series of store byte instructions.
+An implementation may or may not update the entire cache block atomically.
+
+Finally, a cache block hint instruction may perform an _implementation-defined_ 
+operation or no operation, the latter of which does not affect the state of the 
+cache.
+
+=== System Topology
+
+A memory access from a CMO instruction proceeds along _memory access path_ (or 
+_path_ for short) from a given system agent toward a given memory location.
+A path is determined primarily by the following characteristics:
+
+* The physical address of the memory access
+* The memory attributes associated with the memory access
+
+The physical address identifies the memory location being accessed and is a 
+function of the effective address specified by a CMO instruction and any 
+enabled translation mechanisms.
+In addition, the memory attributes for a memory access may be specified by 
+either architectural or _implementation-defined_ mechanisms.
+Other factors, such as type of operation, may also influence the path.
+
+****
+_The memory attributes that typically affect a path are related to cacheability_
+_and coherence; however, other memory attributes may affect a path._
+
+_From the same system agent, paths for memory accesses with the same memory_
+_attributes to different memory locations may be different._
+_Likewise, paths for memory accesses with different memory attributes to the_
+_same memory location may be different._
+****
+
+Paths from different system agents to the same memory location converge at a 
+_point of convergence_ (or _PoC_), and from a given PoC, the paths that have 
+converged do not diverge.
+In addition, the memory accesses on those paths are ordered, and remain 
+ordered, with respect to each other from a PoC until the memory accesses can be 
+completed.
+A PoC is _not_ required to order memory accesses to different memory locations.
+Once an order has been established, those memory accesses are considered to be 
+_access ordered_ and cannot be reordered within the system.
+
+****
+_This ordering definition is necessary to implement cache coherence protocols_
+_and forms the basis for the memory ordering model below._
+_Effectively, a PoC establishes a coherence order for a given memory location_
+_with respect to a given set of agents._
+****
+
+For every memory location in a system, the _point of convergence of memory_, or 
+_PoC-memory_, is the PoC where all paths for a given memory location converge, 
+independent of all other characteristics that define a path.
+At the PoC-memory, all accesses to a memory location have been access ordered, 
+and the CMO instructions defined in this extension are guaranteed to operate on 
+a path up to the PoC-memory.
+
+*_FIXME:_* Define other standard PoCs?
+
+****
+_This extension does not prohibit system agents from bypassing the PoC-memory_
+_to access a memory location, nor does the extension prohibit memory caches_
+_beyond the PoC-memory._
+_However, in such a system, software cannot expect the currently defined cache_
+_operations to have the desired effects with respect to those system agents or_
+_caches._
+
+_Additional system topology beyond the PoC-memory may be specified in future_
+_extensions._
+_For example, additional points of convergence may be defined to manage memory_
+_caches, or various points of persistence may be defined to support different_
+_classes of storage._
+****
+
+A system may define additional custom PoCs before the PoC-memory, and when such 
+a PoC is specified in a CMO instruction, the instruction _must_ operate on a 
+given path up to the custom PoC and may operate on the path up to the 
+PoC-memory.
+A CMO instruction is _not_ required, however, to operate on the path beyond a 
+custom PoC.
+
+****
+_The above definition allows an implementation to perform all operations to_
+_custom PoCs before the PoC-memory as if such operations were performed to the_
+_PoC-memory._
+****
+
+While traversing a given path, a memory access from a CMO instruction operates
+on the caches up to the specified PoC.
+Between a system agent and the first PoC on the path, the memory access
+operates on private caches, and between subsequent PoCs, the memory access
+operates on shared caches.
+There is no requirement, however, for any caches to be present either between a
+system agent and the first PoC or between subsequent PoCs.
+Caches on the path are accessed _directly_ by the memory access.
+Additional caches on the paths that converge at a given PoC may be accessed
+_indirectly_ depending on the memory attributes associated with a memory access
+and any _implementation-defined_ cache coherence mechanisms.
+
+Systems may implement hardware cache coherence mechanisms to ensure that the 
+copies in a set of caches remain _coherent_ with respect to each other, i.e. 
+the copies in the set of caches appear to have the same data values, regardless 
+of which cache in the set is accessed.
+The set of caches on which hardware can maintain this property corresponds to a 
+_hardware coherence domain_ (or _domain_ for short), which may consist of any 
+number of caches, including an individual cache.
+Only a subset of the caches in a domain may be accessed depending on the memory 
+attributes of a memory access and the cache coherence protocol.
+
+****
+_A hardware cache coherence protocol may add additional cache states and may_
+_cause additional cache block state transitions._
+_The effects of a hardware cache coherence protocol on cache block states are_
+_beyond the scope of this specification._
+****
+
+If two caches are in different domains, the copies in those caches are
+_non-coherent_ with respect to each other.
+In addition, two copies in different caches within the same domain are also
+non-coherent with respect to each other if the memory attributes of a memory
+access do not require both caches to be accessed.
+Non-coherent copies may appear to have different data values, or the copies may
+appear to have the same data values.
+Software may enforce coherence on non-coherent copies using CMO instructions.
+
+****
+_The term_ coherent _implies a guarantee of coherence, while the term_
+non-coherent _implies only the lack of such a guarantee, not a guarantee of_
+_non-coherence._
+****
+
+
+****
+Below are some properties/implications of the above definitions:
+
+* Paths form a tree with the system agents as leaves and the PoC-memory as the 
+  root; intermediate PoCs are nodes on the tree, while caches lie on the edges
+  ** For example, a private L1 and L2 cache lie on the edge between a system 
+    agent and the first PoC
+* PoCs establish a hierarchy
+  ** At each PoC, the set of agents whose memory accesses are ordered is the
+    union of the sets defined by the previous PoCs
+* Memory accesses on a path obey uniprocessor semantics
+* Caches on the path from a domain PoC to the next PoC are effectively part of
+  the domain
+* Caches between PoCs are effectively part of the same domain
+  ** The access order of caches between PoCs is implementation-defined (?)
+* PoCs and domains 
+* PoCs are accessed serially (?)
+****

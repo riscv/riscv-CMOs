@@ -1,26 +1,27 @@
-[#insns-cbo_clean,reftext="Cache-block clean (effective address)"]
-=== cbo.clean.ea
+[#insns-cbo_clean,reftext="Cache Block Clean"]
+=== cbo.clean
 
 Synopsis::
-Clean a cache-block (at effective address)
+Perform a clean operation on the cache block containing the effective address
 
 Mnemonic::
-cbo.clean.ea _rs_
+cbo.clean _rs_
 
 Encoding::
 [wavedrom, , svg]
 ....
 {reg:[
-	{ bits: 7,  name: 0x7,   attr: ['MISC-MEM'] },
+	{ bits: 7,  name: 0xF,   attr: ['MISC-MEM'] },
 	{ bits: 5,  name: 0x0 },
 	{ bits: 3,  name: 0x2,   attr: ['CBO'] },
 	{ bits: 5,  name: 'rs' },
-	{ bits: 12, name: 0x001, attr: ['CBO.CLEAN.EA'] },
+	{ bits: 12, name: 0x001, attr: ['CBO.CLEAN'] },
 ]}
 ....
 
 Description::
-A *cbo.clean.ea* instruction performs a clean operation on the set of caches determined by the PoC and the coherence PMA.
+A *cbo.clean* instruction performs a clean operation on the set of coherent
+caches accessed by the observer executing the instruction.
 
 Operation::
 [source,sail]

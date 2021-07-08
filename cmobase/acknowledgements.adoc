@@ -5,5 +5,5 @@ Contributors to this specification (in alphabetical order) include: +
 David Kruckemyer, and
 Philipp Tomsich.
 
-We express our gratitude to everyone that contributed to, reviewed or
-improved this specification through their comments and questions.
+We express our gratitude to everyone that contributed to, reviewed, or improved
+this specification through their comments and questions.

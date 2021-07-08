@@ -1,5 +1,38 @@
-[#Zicbom,reftext="Cache Block Management Operations"]
-=== Cache Block Management Operations
+[#Zicbom,reftext="Cache Block Management Instructions"]
+=== Cache Block Management Instructions
+
+Cache block management instructions enable software running on a set of coherent
+observers to communicate with a set of non-coherent observers by performing one
+of the following operations:
+
+* An _invalidate operation_ makes store operations from a set of non-coherent
+  observers appear to the set of coherent observers by removing all copies of a
+  cache block from the coherent caches
+* A _clean operation_ makes store operations from the set of coherent observers
+  appear to a set of non-coherent observers by performing a write operation of
+  a copy of a cache block to the underlying memory locations (or to a cache
+  shared by both sets), provided a coherent observer performed a store operation
+  to the cache block since the previous such write operation
+* A _flush operation_ atomically performs a clean operation followed by an
+  invalidate operation
+
+In the Zicbom extension, the instructions operate to a point where store
+operations are visible to _all_ observers in the system. In other words, an
+invalidate operation ensures that store operations from all non-coherent
+observers appear to observers in the set of coherent observers, and a clean
+operation ensures that store operations from coherent observers appear to all
+non-coherent observers.
+
+****
+
+_The Zicbom extension does not prohibit observers that fall outside of the above
+architectural definition; however, software cannot rely on the defined cache
+operations to have the desired effects with respect to those observers._
+
+_Future extensions may define different sets of observers for the purposes of
+performance optimization._
+
+****
 
 The following instructions comprise the Zicbom extension:
 
@@ -12,18 +45,17 @@ The following instructions comprise the Zicbom extension:
 
 |&#10003;
 |&#10003;
-|cbo.clean.ea _rs_
+|cbo.clean _rs_
 |<<#insns-cbo_clean>>
 
 |&#10003;
 |&#10003;
-|cbo.flush.ea _rs_
+|cbo.flush _rs_
 |<<#insns-cbo_flush>>
 
 |&#10003;
 |&#10003;
-|cbo.invalidate.ea _rs_
+|cbo.inval _rs_
 |<<#insns-cbo_inval>>
 
 |===
-
