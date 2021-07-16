@@ -12,10 +12,6 @@ observer may not be able to access all memory locations in a system, and two
 different harts or devices may or may not be able to observe the same set of
 memory locations.
 
-The physical address for a memory location may be specified by an observer
-directly or may be obtained from an effective address via various translation
-mechanisms.
-
 In this specification, a _load operation_ (or _store operation_) is performed by
 an observer to consume (or modify) the data at a given memory location. For a
 RISC-V hart, a load or store operation may be performed as a result of an
@@ -152,7 +148,17 @@ Axiom:
   store to that byte appears in program order or in the global memory order 
   between the invalidate and _i_, the load value is _implementation-defined_
 
-=== Traps
+=== Instruction Execution and Traps
+
+Similar to load and store instructions, CMO instructions are memory access
+instructions that compute an effective address. The effective address is
+ultimately translated into a physical address based on the privilege mode and
+enabled translation mechanisms.
+
+Execution of certain CMO instructions may result in traps due to CSR state,
+described in the <<#csr_state>> section, or due to the various memory
+translation and protection mechanisms. The trapping behavior of CMO instructions
+is described in the following sections.
 
 ==== Illegal Instruction and Virtual Instruction Exceptions
 
