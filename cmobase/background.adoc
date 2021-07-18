@@ -174,24 +174,27 @@ the type of instruction, the _effective privilege mode_ (as determined by the
 permissions granted by the page table entry (PTE). If two-stage address
 translation is enabled, CMO instructions may also take a guest-page fault.
 
-Cache block management instructions require a valid translation (`V=1`) and
-either read (`R=1`) or execute (`X=1`) permission and, if applicable, user
-access (`U=1`) in the effective privilege mode. If the required conditions are
-_not_ met, the instruction takes a store/AMO page fault exception.
+Cache block management instructions require a valid leaf translation
+(`V=1` and `RWX` encoding not "_Reserved for future use._") and,
+if applicable, user access (`U=1`) in the effective privilege mode.
+If the required conditions are _not_ met, the instruction takes
+a store/AMO page fault exception.
 
-Cache block zero instructions require a valid translation (`V=1`) and write
-(`W=1`) permission and, if applicable, user access (`U=1`) in the effective
-privilege mode. If the required conditions are _not_ met, the instruction takes
+Cache block zero instructions require a valid leaf translation
+(`V=1` and `RWX` encoding not "_Reserved for future use._")
+and write (`W=1`) permission and,
+if applicable, user access (`U=1`) in the effective privilege mode.
+If the required conditions are _not_ met, the instruction takes
 a store/AMO page fault exception.
 
 If G-stage address translation is enabled, the above instructions take a 
 store/AMO guest-page fault if the G-stage PTE does _not_ allow the access.
 
-Cache block prefetch instructions require a valid translation (`V=1`) and either
-read (`R=1`) or execute (`X=1`) permission and, if applicable, user access
-(`U=1`) in the effective privilege mode. In addition, it is
-_implementation-defined_ whether any of the following are required to perform a
-memory access:
+Cache block prefetch instructions require a valid leaf translation
+(`V=1` and `RWX` encoding not "_Reserved for future use._") and,
+if applicable, user access (`U=1`) in the effective privilege mode.
+In addition, it is _implementation-defined_ whether any of the following are
+required to perform a memory access:
 
 * `PREFETCH.R` requires read (`R=1`) permission
 * `PREFETCH.W` requires write (`W=1`) permission
@@ -246,19 +249,19 @@ for a given physical address:
 * _joint execute permission_ is granted when both the PMP and PMAs allow execute
   access to the physical address
 
-Cache block management instructions require either joint read permission or
-joint execute permission for each physical address in a cache block. If the
-required condition is _not_ met, the instruction takes a store/AMO access fault
-exception.
+Cache block management instructions require at least one of joint read, execute,
+or write permission for each physical address in a cache block, excluding the
+reserved combinations. If the required condition is _not_ met, the instruction
+takes a store/AMO access fault exception.
 
 Cache block zero instructions require joint write permission for each physical
 address in a cache block. If the required condition is _not_ met, the
 instruction takes a store/AMO access fault exception.
 
-Cache block prefetch instructions require either joint read permission or joint
-execute permission for each physical address in a cache block. In addition, it
-is _implementation-defined_ whether any of the following are required to perform
-a memory access:
+Cache block prefetch instructions require at least one of joint read, execute,
+or write permission for each physical address in a cache block, excluding the
+reserved combinations. In addition, it is _implementation-defined_
+whether any of the following are required to perform a memory access:
 
 * `PREFETCH.R` requires joint read permission
 * `PREFETCH.W` requires joint write permission
