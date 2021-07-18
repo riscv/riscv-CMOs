@@ -28,7 +28,7 @@ update) the data at the physical resource.
 _Load and store operations are decoupled from read and write operations by
 caches, described below. For example, a load operation may be satisfied by a
 cache without performing a read operation in memory, or a store operation may be
-satisfied by a cache that first performs a read operation._
+buffered in a cache that later performs a write operation._
 
 ****
 
