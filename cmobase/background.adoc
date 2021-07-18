@@ -141,16 +141,17 @@ behave as stores in the PPO rules.
 Finally, as cache block prefetch instructions do not modify architectural memory
 state, the resulting operations are _not_ ordered by the PPO rules.
 
-==== Load Values (FIXME)
+==== Load Values
 
-In addition, an invalidate operation changes the set of values that may be 
-returned by a load. In particular, a third condition is added to the Load Value 
+In addition, an invalidate operation may change the set of values that may be
+returned by a load. In particular, a third condition is added to the Load Value
 Axiom:
 
 [start=3]
-. If an invalidate precedes _i_ in program order and operates on a byte, and no 
-  store to that byte appears in program order or in the global memory order 
-  between the invalidate and _i_, the load value is _implementation-defined_
+. If an invalidate precedes _i_ in program order and operates on a byte, and no
+  store to that byte appears in program order or in the global memory order
+  between the invalidate and _i_, the load may return any value stored
+  to or present in memory from before the invalidate.
 
 === Traps
 
