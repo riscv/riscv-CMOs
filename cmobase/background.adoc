@@ -280,10 +280,10 @@ load and store address matches is UNSPECIFIED for CMO instructions. When
 `type=6` (i.e. `mcontrol6`), the behavior of a trigger for load and store
 address matches is based on the following classification of a CMO instruction:
 
-* A cache block management instruction is both a load and a store
+* A cache block management instruction is a store
 * A cache block zero instruction is a store 
 * It is _implementation-defined_ whether a cache block prefetch instruction is
-  both a load and a store or neither a load nor a store
+  a load, a store, both, or neither
 
 Load and store data matches for all CMO instructions are UNSPECIFIED.
 
