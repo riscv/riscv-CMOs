@@ -307,8 +307,8 @@ should program the NAPOT range to equal the cache block size._
 
 === Effects on Constrained LR/SC Loops
 
-Executing a `CBO.INVAL`, `CBO.FLUSH`, `CBO.ZERO`, or `PREFETCH.W` instruction
-may cause a reservation on another hart to be lost. As a result, executing one
-of these instructions constitutes an additional event (like executing an
-unconditional store or AMO instruction) that satisfies the system forward
-progress requirements of constrained LR/SC loops.
+Executing a `CBO.INVAL`, `CBO.FLUSH`, `CBO.CLEAN`, `CBO.ZERO`, or `PREFETCH.W`
+instruction may cause a reservation on another hart to be lost. As a result,
+executing one of these instructions constitutes an additional event (like
+executing an unconditional store or AMO instruction) that satisfies the
+system forward progress requirements of constrained LR/SC loops.
